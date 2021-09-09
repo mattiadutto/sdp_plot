@@ -31,7 +31,6 @@ inline void setRGB(png_byte *ptr, float val)
     // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
 }
 
-
 int writeImage(char* filename, int width, int height, float *buffer, char* title)
 {
 	int code = 0;
@@ -124,7 +123,6 @@ int main(int argc, char ** argv){
 
     std::unordered_map<std::string, Point*>::iterator it;
 
-
     if(argc != (1+2+2+2+2)){
         fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
         return -1;
@@ -172,25 +170,18 @@ int main(int argc, char ** argv){
 	    height = atoi(strtok(NULL, "x"));
     }
     
-    // Leggo file dei segnali
-    // TODO: eliminare argv[2]
+    // Leggo il file dei segnali
     file_pointer.open(cell_file);
     if(file_pointer.is_open()){
         while(file_pointer){
             file_pointer >> signal_name >> x >> y;
+            // servira' per quando avremo a che fare con il ridimensionamento
             if(x > MAX_WIDTH)
                 MAX_WIDTH = x;
             if(y > MAX_HEIGHT)
                 MAX_HEIGHT = y;
-            //Point *p = new Point;
-            //p->setPosition(x,y);
-
-            //printf("%p\t", &p);
-            //Point(x,y).toString();
-            //cout << signal_name << "\t" << x << "\t"<< y << "\n";
-            
-            //std::pair<std::string,Point *> my_point (signal_name,new Point(x,y));
-            //map_points.insert(my_point);
+            // std::pair<std::string,Point *> my_point (signal_name,new Point(x,y)); // alternativa alla riga di sotto
+            // map_points.insert(my_point);
             
             map_points.insert(it, std::pair<std::string, Point *>(signal_name, new Point(x,y)));
         }
@@ -198,13 +189,11 @@ int main(int argc, char ** argv){
 
     file_pointer.close();
 
-    // Leggo file delle coperture
-    // TODO: eliminare argv[4]
+    // Leggo il file delle coperture
     file_pointer.open(coverage_file);
     if(file_pointer.is_open()){
         while(file_pointer){
             file_pointer >> signal_name >> coverage;
-            //cout << coverage;
             it = map_points.find(signal_name);
             if(it != map_points.end()){
                 it->second->setCoverage(coverage);
@@ -217,7 +206,7 @@ int main(int argc, char ** argv){
     // for (auto & x : map_points)
     //     x.second->toString();
 
-    // Inizializzo il buffer
+    // Alloco e inizializzo il buffer
     float *buffer = (float *) malloc(width * height * sizeof(float));
 	if (buffer == NULL) {
 		fprintf(stderr, "Could not create image buffer\n");
@@ -227,11 +216,10 @@ int main(int argc, char ** argv){
     for(int i = 0; i < width * height; i++)
         buffer[i] = 0.0;
     
-
     for(auto &x : map_points){
         buffer[x.second->getPosition(width)] = x.second->getCoverage();
     }
-
+    // Creo l'immagine
     int result = writeImage(output_file, width, height, buffer, output_file);
 
 	// Free up the memorty used to store the image
