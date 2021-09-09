@@ -32,10 +32,12 @@ float MAX_HEIGHT = 0;
 
 inline void setRGB(png_byte *ptr, float val)
 {
-	// from https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
-	ptr[0] = 2.0 * (1-val);
-	ptr[1] = 2.0 * val;
+	// da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
+	ptr[0] = (1-val) * 255;
+	ptr[1] = val * 255; 
 	ptr[2] = 0;
+
+    printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]);
 }
 
 
@@ -102,9 +104,8 @@ int writeImage(char* filename, int width, int height, float *buffer, char* title
 	// Write image data
 	int x, y;
 	for (y=0 ; y<height ; y++) {
-		for (x=0 ; x<width ; x++) {
+		for (x=0 ; x<width ; x++) 
 			setRGB(&(row[x*3]), buffer[y*width + x]);
-		}
 		png_write_row(png_ptr, row);
 	}
 
@@ -227,16 +228,9 @@ int main(int argc, char ** argv){
         buffer[x.second->getPosition(width)] = x.second->getCoverage();
     }
 
-    for(int i = 0; i < width * height; i++){
-         printf("%.2f\t", buffer[i]);
-    }
-
     int result = writeImage(argv[1], width, height, buffer, argv[1]);
 
 	// Free up the memorty used to store the image
 	free(buffer);
-
-    
-
 }
 
