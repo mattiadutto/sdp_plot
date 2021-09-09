@@ -12,20 +12,11 @@
 
 #include "Point.h"
 
-#define MAX_STR 500
+#define MAX_STR 50
 
 using namespace std;
 
-typedef struct{
-    float x;
-    float y;
-    char name[MAX_STR +1];
-    int numberOfPoints;
-    int coverage;
-}point;
-
 // Questi ci serviranno per riscalare l'immagine. 
-
 float MAX_WIDTH = 0;
 float MAX_HEIGHT = 0;
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
@@ -37,7 +28,7 @@ inline void setRGB(png_byte *ptr, float val)
 	ptr[1] = val * 255; 
 	ptr[2] = 0;
 
-    printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]);
+    // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
 }
 
 
@@ -122,57 +113,71 @@ int writeImage(char* filename, int width, int height, float *buffer, char* title
 }
 
 int main(int argc, char ** argv){
-    char *cell_file, *coverage_file, *output_file;
+    char cell_file[MAX_STR +1], coverage_file[MAX_STR +1], output_file[MAX_STR +1];
+    int width, height;
     
-    char tmp_signal_name[MAX_STR + 1];
+    std::ifstream file_pointer;
+    std::unordered_map<std::string, Point*> map_points;
+    std::string signal_name;
+    
     float x, y, coverage;
 
-    std::unordered_map<std::string, Point*> map_points;
-    
+    std::unordered_map<std::string, Point*>::iterator it;
+
+
     if(argc != (1+2+2+2+2)){
         fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
         return -1;
     }
-    /*
-    if(argv[1] == "-d")
+    
+    // Lettura dei parametri
+    if(strcmp(argv[1], "-d") == 0)
         strcpy(cell_file, argv[2]);
-    else if(argv[3] == "-d")
+    else if(strcmp(argv[3], "-d") == 0)
         strcpy(cell_file, argv[4]);
-    else if(argv[5] == "-d")
+    else if(strcmp(argv[5], "-d") == 0)
         strcpy(cell_file, argv[6]);
+    else if(strcmp(argv[7], "-d") == 0)
+        strcpy(cell_file, argv[8]);
 
-    if(argv[1] == "-c")
+    if(strcmp(argv[1], "-c") == 0)
         strcpy(coverage_file, argv[2]);
-    else if(argv[3] == "-c")
+    else if(strcmp(argv[3], "-c") == 0)
         strcpy(coverage_file, argv[4]);
-    else if(argv[5] == "-c")
+    else if(strcmp(argv[5], "-c") == 0)
         strcpy(coverage_file, argv[6]);
+    else if(strcmp(argv[7], "-c") == 0)
+        strcpy(coverage_file, argv[8]);
 
-    if(argv[1] == "-o")
+    if(strcmp(argv[1], "-o") == 0)
         strcpy(output_file, argv[2]);
-    else if(argv[3] == "-o")
+    else if(strcmp(argv[3], "-o") == 0)
         strcpy(output_file, argv[4]);
-    else if(argv[5] == "-o")
+    else if(strcmp(argv[5], "-o") == 0)
         strcpy(output_file, argv[6]);
-    */
-   /*
-    int width = atoi(strtok(argv[8], "x"));
-	int height = atoi(strtok(NULL, "x"));
-*/
-    int width = 50;
-    int height = 25;
+    else if(strcmp(argv[7], "-o") == 0)
+        strcpy(output_file, argv[8]);
 
-    std::ifstream myfile;
-    std::string signal_name;
-    std::unordered_map<std::string, Point*>::iterator it;
-    it = map_points.begin();
-
+    if(strcmp(argv[1], "-r") == 0){
+        width = atoi(strtok(argv[2], "x"));
+	    height = atoi(strtok(NULL, "x"));
+    }else if(strcmp(argv[3], "-r") == 0){
+        width = atoi(strtok(argv[4], "x"));
+	    height = atoi(strtok(NULL, "x"));
+    }else if(strcmp(argv[5], "-r") == 0){
+        width = atoi(strtok(argv[6], "x"));
+	    height = atoi(strtok(NULL, "x"));
+    }else if(strcmp(argv[7], "-r") == 0){
+        width = atoi(strtok(argv[8], "x"));
+	    height = atoi(strtok(NULL, "x"));
+    }
+    
     // Leggo file dei segnali
     // TODO: eliminare argv[2]
-    myfile.open(argv[2]);
-    if(myfile.is_open()){
-        while(myfile){
-            myfile >> signal_name >> x >> y;
+    file_pointer.open(cell_file);
+    if(file_pointer.is_open()){
+        while(file_pointer){
+            file_pointer >> signal_name >> x >> y;
             if(x > MAX_WIDTH)
                 MAX_WIDTH = x;
             if(y > MAX_HEIGHT)
@@ -191,14 +196,14 @@ int main(int argc, char ** argv){
         }
     }
 
-    myfile.close();
+    file_pointer.close();
 
     // Leggo file delle coperture
     // TODO: eliminare argv[4]
-    myfile.open(argv[4]);
-    if(myfile.is_open()){
-        while(myfile){
-            myfile >> signal_name >> coverage;
+    file_pointer.open(coverage_file);
+    if(file_pointer.is_open()){
+        while(file_pointer){
+            file_pointer >> signal_name >> coverage;
             //cout << coverage;
             it = map_points.find(signal_name);
             if(it != map_points.end()){
@@ -206,12 +211,11 @@ int main(int argc, char ** argv){
             }
         }
     }
-    myfile.close();
+    file_pointer.close();
 
     // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
-    for (auto & x : map_points)
-        //cout<< x.first << "\n";
-        x.second->toString();
+    // for (auto & x : map_points)
+    //     x.second->toString();
 
     // Inizializzo il buffer
     float *buffer = (float *) malloc(width * height * sizeof(float));
@@ -228,7 +232,7 @@ int main(int argc, char ** argv){
         buffer[x.second->getPosition(width)] = x.second->getCoverage();
     }
 
-    int result = writeImage(argv[1], width, height, buffer, argv[1]);
+    int result = writeImage(output_file, width, height, buffer, output_file);
 
 	// Free up the memorty used to store the image
 	free(buffer);
