@@ -1,0 +1,7 @@
+/top/component_yellow 0.5
+/top/component_green 1.0
+/top/component_red 0.0
+/top/module1/low_covered_square 0.5
+/top/module1/low_covered_square1 0.0
+/top/module1/low_covered_square2 0.0
+/top/nonexisting 0.0
