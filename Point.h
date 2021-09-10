@@ -1,7 +1,7 @@
 class Point{
     private:
-        float x;
-        float y;
+        int x;
+        int y;
 
         int number_of_points;
         float coverage;
@@ -11,8 +11,8 @@ class Point{
             Point(-1, -1);
         }
         Point(float x, float y){
-            this->x = x;
-            this->y = y;
+            this->x = (int)x;
+            this->y = (int)y;
             this->number_of_points = 0;
             this->coverage = 0;
         }
@@ -35,16 +35,16 @@ class Point{
         }
 
         void const toString(){
-            printf("%p\t%f\t%f\t%d\t%f\n",this, x, y, number_of_points, getCoverage());
+            printf("%p\t%d\t%d\t%d\t%f\n",this, x, y, number_of_points, getCoverage());
         }
 
-        void setPosition(float x, float y){
+        void setPosition(int x, int y){
             this->x = x;
             this->y = y;
         }
 
         int getPosition(int width){
-            printf("%f\n", (this->y* width) + this->x);
+            //printf("%d\n", (this->y* width) + this->x);
             return (this->y * width) + this->x;
         }
 

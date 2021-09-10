@@ -109,8 +109,6 @@ int writeImage(char *filename, int width, int height, float *buffer, char *title
     {
         for (x = 0; x < width; x++){
             setRGB(&(row[x * 3]), buffer[y * width + x]);
-        if( (y == 0 ) && x == 1)
-            setRGB(&(row[x * 3]), 1); 
     }
         png_write_row(png_ptr, row);
     }
@@ -140,7 +138,8 @@ int main(int argc, char **argv)
     std::unordered_map<std::string, Point *> map_points;
     std::string signal_name;
 
-    float x, y, coverage;
+    float x, y;
+    float coverage;
 
     std::unordered_map<std::string, Point *>::iterator it;
 
@@ -242,10 +241,10 @@ int main(int argc, char **argv)
     //printf("# OF POINTS: %lld", (long long int)map_points.size());
 
     // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
-     for (auto &x : map_points){
-    //     cout << x.first << "\t";
-         x.second->toString();
-     }
+    //  for (auto &x : map_points){
+    //      cout << x.first << "\t";
+    //      x.second->toString();
+    //  }
 
     // Se l'immagine è più piccola del MAX_WIDTH, ridimensiono l'immagine
     // if (MAX_WIDTH > width)
@@ -271,8 +270,7 @@ int main(int argc, char **argv)
     {
         buffer[x.second->getPosition(width)] = x.second->getCoverage();
     }
-    buffer[21] = 1;
-
+    
     // Creo l'immagine
     int result = writeImage(output_file, width, height, buffer, output_file);
 
