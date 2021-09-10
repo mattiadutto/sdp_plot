@@ -44,6 +44,7 @@ class Point{
         }
 
         int getPosition(int width){
+            printf("%f\n", (this->y* width) + this->x);
             return (this->y * width) + this->x;
         }
 
