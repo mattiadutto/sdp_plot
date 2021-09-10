@@ -1,6 +1,6 @@
-/top/component_yellow 10 9
-/top/component_green 23 19
-/top/component_red 22 10
-/top/module1/low_covered_square 50 5
-/top/module1/low_covered_square1 49 15
-/top/module1/low_covered_square2 48 5
+top/component_yellow 10.5 9.5
+top/component_green 23 19.23
+top/component_red 22 10.11
+top/module1/low_covered_square 50 5
+top/module1/low_covered_square1 49.11 15
+top/module1/low_covered_square2 48.99 5
