@@ -12,7 +12,9 @@
 
 #include "Point.h"
 
-#define MAX_STR 50
+#define PRINT 0 // Per debug, stampa alcuni dati extra
+
+#define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
 
 using namespace std;
 
@@ -21,11 +23,12 @@ float MAX_WIDTH = 0;
 float MAX_HEIGHT = 0;
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
 
-inline void setRGB(png_byte *ptr, float val)
+inline void setRGB(png_byte *ptr, float val, unsigned char count)
 {
     // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
     if (val != -1.0)
     {
+        val = val / count;
         ptr[0] = (1 - val) * 255;
         ptr[1] = val * 255;
         ptr[2] = 0;
@@ -38,7 +41,7 @@ inline void setRGB(png_byte *ptr, float val)
     // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
 }
 
-int writeImage(char *filename, int width, int height, float *buffer, char *title)
+int writeImage(char *filename, int width, int height, float *buffer, unsigned char *bufferCount, char *title)
 {
     int code = 0;
     FILE *fp = NULL;
@@ -108,8 +111,13 @@ int writeImage(char *filename, int width, int height, float *buffer, char *title
     for (y = 0; y < height; y++)
     {
         for (x = 0; x < width; x++){
-            setRGB(&(row[x * 3]), buffer[y * width + x]);
-    }
+            #if PRINT
+            if(bufferCount[y * width + x] != 0){
+                printf("%dx%d\t%f\t%d\n", x, y, buffer[y*width + x], bufferCount[y*width + x]);
+            }
+            #endif
+            setRGB(&(row[x * 3]), buffer[y * width + x], bufferCount[y * width + x]);
+        }
         png_write_row(png_ptr, row);
     }
 
@@ -201,10 +209,11 @@ int main(int argc, char **argv)
     //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string, Point>));
 
     // Leggo il file dei segnali
+    cout << "Lettura file segnali" << "\n";
     file_pointer.open(cell_file);
     if (file_pointer.is_open())
     {
-        while (file_pointer)
+        while (!file_pointer.eof())
         {
             file_pointer >> signal_name >> y >> x;
             // servira' per quando avremo a che fare con il ridimensionamento
@@ -221,12 +230,13 @@ int main(int argc, char **argv)
     }
 
     file_pointer.close();
-
+    cout << "Fine lettura file segnali" << "\n";
     // Leggo il file delle coperture
+    cout << "Lettura file coperture" << "\n";
     file_pointer.open(coverage_file);
     if (file_pointer.is_open())
     {
-        while (file_pointer)
+        while (!file_pointer.eof())
         {
             file_pointer >> signal_name >> coverage;
             it = map_points.find(signal_name);
@@ -237,43 +247,61 @@ int main(int argc, char **argv)
         }
     }
     file_pointer.close();
-
+    cout << "Fine lettura file coperture" << "\n";
     //printf("# OF POINTS: %lld", (long long int)map_points.size());
 
     // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
-    //  for (auto &x : map_points){
-    //      cout << x.first << "\t";
-    //      x.second->toString();
-    //  }
+    #if PRINT
+     for (auto &x : map_points){
+         cout << x.first << "\t";
+         x.second->toString();
+     }
+    #endif
 
     // Se l'immagine è più piccola del MAX_WIDTH, ridimensiono l'immagine
     // if (MAX_WIDTH > width)
     //     width = MAX_WIDTH;
     // if (MAX_HEIGHT > height)
     //     height = MAX_HEIGHT;
-    
+    #if PRINT
     printf("WIDTH x HEIGHT: %d x %d\n", width, height);
     //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
     printf("BUFFER SIZE: %d\n", width * height);
+    #endif
     // Alloco e inizializzo il buffer
     float *buffer = (float *)malloc(width * height * sizeof(float));
+    unsigned char *bufferCount = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+    //unsigned char bufferCount[1500];
+    int pos = -1;
+
     if (buffer == NULL)
     {
         fprintf(stderr, "Could not create image buffer\n");
         return NULL;
     }
 
-    for (int i = 0; i < width * height; i++)
+    for (int i = 0; i < width * height; i++){
         buffer[i] = -1.0;
+        bufferCount[i] = 0;
+    }
 
     for (auto &x : map_points)
     {
-        buffer[x.second->getPosition(width)] = x.second->getCoverage();
+        pos = x.second->getPosition(width);
+        if(buffer[pos] == -1)
+            buffer[pos] = x.second->getCoverage();
+        else
+            buffer[pos] += x.second->getCoverage();
+        bufferCount[pos]++;
     }
     
     // Creo l'immagine
-    int result = writeImage(output_file, width, height, buffer, output_file);
+    cout << "Creazione immagine" << "\n";
+    int result = writeImage(output_file, width, height, buffer, bufferCount ,output_file);
 
     // Free up the memorty used to store the image
     free(buffer);
+    free(bufferCount);
+    cout << "Fine" << "\n";
+    return 0;
 }
