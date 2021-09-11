@@ -1,3 +1,6 @@
+#define PRINT 0 // Per debug, stampa alcuni dati extra
+#define TIME 0  // Per calcolo tempo esecuzione
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,18 +12,20 @@
 #include <fstream>
 #include <unordered_map>
 #include <utility>
-
+#if TIME
+#include <chrono>
+#endif
 #include "Point.h"
 
-#define PRINT 0 // Per debug, stampa alcuni dati extra
-
 #define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
+#define TITLE "Title"
 
 using namespace std;
 
 // Questi ci serviranno per riscalare l'immagine.
 float MAX_WIDTH = 0;
 float MAX_HEIGHT = 0;
+
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
 
 inline void setRGB(png_byte *ptr, float val, unsigned char count)
@@ -96,7 +101,7 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
     {
         png_text title_text;
         title_text.compression = PNG_TEXT_COMPRESSION_NONE;
-        title_text.key = "Title";
+        title_text.key = TITLE;
         title_text.text = title;
         png_set_text(png_ptr, info_ptr, &title_text, 1);
     }
@@ -110,12 +115,14 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
     int x, y;
     for (y = 0; y < height; y++)
     {
-        for (x = 0; x < width; x++){
-            #if PRINT
-            if(bufferCount[y * width + x] != 0){
-                printf("%dx%d\t%f\t%d\n", x, y, buffer[y*width + x], bufferCount[y*width + x]);
+        for (x = 0; x < width; x++)
+        {
+#if PRINT
+            if (bufferCount[y * width + x] != 0)
+            {
+                printf("%dx%d\t%f\t%d\n", x, y, buffer[y * width + x], bufferCount[y * width + x]);
             }
-            #endif
+#endif
             setRGB(&(row[x * 3]), buffer[y * width + x], bufferCount[y * width + x]);
         }
         png_write_row(png_ptr, row);
@@ -139,6 +146,9 @@ finalise:
 
 int main(int argc, char **argv)
 {
+#if TIME
+    auto start = chrono::steady_clock::now();
+#endif
     char cell_file[MAX_STR + 1], coverage_file[MAX_STR + 1], output_file[MAX_STR + 1];
     int width, height;
 
@@ -209,7 +219,8 @@ int main(int argc, char **argv)
     //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string, Point>));
 
     // Leggo il file dei segnali
-    cout << "Lettura file segnali" << "\n";
+    cout << "Lettura file segnali"
+         << "\n";
     file_pointer.open(cell_file);
     if (file_pointer.is_open())
     {
@@ -230,9 +241,11 @@ int main(int argc, char **argv)
     }
 
     file_pointer.close();
-    cout << "Fine lettura file segnali" << "\n";
+    cout << "Fine lettura file segnali"
+         << "\n";
     // Leggo il file delle coperture
-    cout << "Lettura file coperture" << "\n";
+    cout << "Lettura file coperture"
+         << "\n";
     file_pointer.open(coverage_file);
     if (file_pointer.is_open())
     {
@@ -247,40 +260,47 @@ int main(int argc, char **argv)
         }
     }
     file_pointer.close();
-    cout << "Fine lettura file coperture" << "\n";
+    cout << "Fine lettura file coperture"
+         << "\n";
     //printf("# OF POINTS: %lld", (long long int)map_points.size());
 
     // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
-    #if PRINT
-     for (auto &x : map_points){
-         cout << x.first << "\t";
-         x.second->toString();
-     }
-    #endif
+#if PRINT
+    for (auto &x : map_points)
+    {
+        cout << x.first << "\t";
+        x.second->toString();
+    }
+#endif
 
     // Se l'immagine è più piccola del MAX_WIDTH, ridimensiono l'immagine
-    // if (MAX_WIDTH > width)
-    //     width = MAX_WIDTH;
-    // if (MAX_HEIGHT > height)
-    //     height = MAX_HEIGHT;
-    #if PRINT
+    if (MAX_WIDTH < width)
+    {
+        width = MAX_WIDTH + 1;
+    }
+    if (MAX_HEIGHT < height)
+    {
+        height = MAX_HEIGHT + 1;
+    }
+
+#if PRINT
     printf("WIDTH x HEIGHT: %d x %d\n", width, height);
     //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
     printf("BUFFER SIZE: %d\n", width * height);
-    #endif
+#endif
     // Alloco e inizializzo il buffer
     float *buffer = (float *)malloc(width * height * sizeof(float));
     unsigned char *bufferCount = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-    //unsigned char bufferCount[1500];
     int pos = -1;
 
-    if (buffer == NULL)
+    if (buffer == NULL || bufferCount == NULL)
     {
         fprintf(stderr, "Could not create image buffer\n");
-        return NULL;
+        return -2;
     }
 
-    for (int i = 0; i < width * height; i++){
+    for (int i = 0; i < width * height; i++)
+    {
         buffer[i] = -1.0;
         bufferCount[i] = 0;
     }
@@ -288,20 +308,28 @@ int main(int argc, char **argv)
     for (auto &x : map_points)
     {
         pos = x.second->getPosition(width);
-        if(buffer[pos] == -1)
+        if (buffer[pos] == -1)
             buffer[pos] = x.second->getCoverage();
         else
             buffer[pos] += x.second->getCoverage();
         bufferCount[pos]++;
     }
-    
+
     // Creo l'immagine
-    cout << "Creazione immagine" << "\n";
-    int result = writeImage(output_file, width, height, buffer, bufferCount ,output_file);
+    cout << "Creazione immagine"
+         << "\n";
+    int result = writeImage(output_file, width, height, buffer, bufferCount, output_file);
 
     // Free up the memorty used to store the image
     free(buffer);
     free(bufferCount);
-    cout << "Fine" << "\n";
+    cout << "Fine"
+         << "\n";
+#if TIME
+    auto end = chrono::steady_clock::now();
+    cout << "Elapsed time in seconds: "
+         << chrono::duration_cast<chrono::seconds>(end - start).count()
+         << " sec";
+#endif
     return 0;
 }
