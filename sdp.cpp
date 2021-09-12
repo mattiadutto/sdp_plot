@@ -1,5 +1,6 @@
 #define PRINT 0 // Per debug, stampa alcuni dati extra
 #define TIME 0  // Per calcolo tempo esecuzione
+#define THREAD 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,10 @@
 #if TIME
 #include <chrono>
 #endif
+#if THREAD
+#define N_THREADS 2
+#include <thread>
+#endif
 #include "Point.h"
 
 #define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
@@ -27,122 +32,12 @@ float MAX_WIDTH = 0;
 float MAX_HEIGHT = 0;
 
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
-
-inline void setRGB(png_byte *ptr, float val, unsigned char count)
-{
-    // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
-    if (val != -1.0)
-    {
-        val = val / count;
-        ptr[0] = (1 - val) * 255;
-        ptr[1] = val * 255;
-        ptr[2] = 0;
-    }
-    else
-    {
-        ptr[0] = ptr[1] = ptr[2] = 255;
-    }
-
-    // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
-}
-
-int writeImage(char *filename, int width, int height, float *buffer, unsigned char *bufferCount, char *title)
-{
-    int code = 0;
-    FILE *fp = NULL;
-    png_structp png_ptr = NULL;
-    png_infop info_ptr = NULL;
-    png_bytep row = NULL;
-
-    // Open file for writing (binary mode)
-    fp = fopen(filename, "wb");
-    if (fp == NULL)
-    {
-        fprintf(stderr, "Could not open file %s for writing\n", filename);
-        code = 1;
-        goto finalise;
-    }
-
-    // Initialize write structure
-    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (png_ptr == NULL)
-    {
-        fprintf(stderr, "Could not allocate write struct\n");
-        code = 1;
-        goto finalise;
-    }
-
-    // Initialize info structure
-    info_ptr = png_create_info_struct(png_ptr);
-    if (info_ptr == NULL)
-    {
-        fprintf(stderr, "Could not allocate info struct\n");
-        code = 1;
-        goto finalise;
-    }
-
-    // Setup Exception handling
-    if (setjmp(png_jmpbuf(png_ptr)))
-    {
-        fprintf(stderr, "Error during png creation\n");
-        code = 1;
-        goto finalise;
-    }
-
-    png_init_io(png_ptr, fp);
-
-    // Write header (8 bit colour depth)
-    png_set_IHDR(png_ptr, info_ptr, width, height,
-                 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
-                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
-
-    // Set title
-    if (title != NULL)
-    {
-        png_text title_text;
-        title_text.compression = PNG_TEXT_COMPRESSION_NONE;
-        title_text.key = TITLE;
-        title_text.text = title;
-        png_set_text(png_ptr, info_ptr, &title_text, 1);
-    }
-
-    png_write_info(png_ptr, info_ptr);
-
-    // Allocate memory for one row (3 bytes per pixel - RGB)
-    row = (png_bytep)malloc(3 * width * sizeof(png_byte));
-
-    // Write image data
-    int x, y;
-    for (y = 0; y < height; y++)
-    {
-        for (x = 0; x < width; x++)
-        {
-#if PRINT
-            if (bufferCount[y * width + x] != 0)
-            {
-                printf("%dx%d\t%f\t%d\n", x, y, buffer[y * width + x], bufferCount[y * width + x]);
-            }
+inline void setRGB(png_byte *ptr, float val, unsigned char count);
+int writeImage(char *filename, int width, int height, float *buffer, unsigned char *buffer_count, char *title);
+void finalise(FILE *fp,png_infop info_ptr, png_structp png_ptr);
+#if THREAD
+void thread_function(float *buffer, unsigned char *buffer_count, int width, int y, std::thread *threads, int thread_id, png_structp png_ptr);
 #endif
-            setRGB(&(row[x * 3]), buffer[y * width + x], bufferCount[y * width + x]);
-        }
-        png_write_row(png_ptr, row);
-    }
-
-    // End write
-    png_write_end(png_ptr, NULL);
-
-finalise:
-    if (fp != NULL)
-        fclose(fp);
-    if (info_ptr != NULL)
-        png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
-    if (png_ptr != NULL)
-        png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
-    if (row != NULL)
-        free(row);
-
-    return code;
-}
 
 int main(int argc, char **argv)
 {
@@ -240,6 +135,13 @@ int main(int argc, char **argv)
         }
     }
 
+#if TIME
+    auto end_structure_file = chrono::steady_clock::now();
+    cout << "Elapsed time [READING STRUCTURE FILE] in seconds: "
+         << chrono::duration_cast<chrono::seconds>(end_structure_file - start).count()
+         << " sec";
+#endif
+
     file_pointer.close();
     cout << "Fine lettura file segnali"
          << "\n";
@@ -262,6 +164,12 @@ int main(int argc, char **argv)
     file_pointer.close();
     cout << "Fine lettura file coperture"
          << "\n";
+#if TIME
+    auto end_coverage_file = chrono::steady_clock::now();
+    cout << "Elapsed time [READING STRUCTURE FILE] in seconds: "
+         << chrono::duration_cast<chrono::seconds>(end_coverage_file - end_structure_file).count()
+         << " sec";
+#endif
     //printf("# OF POINTS: %lld", (long long int)map_points.size());
 
     // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
@@ -290,10 +198,10 @@ int main(int argc, char **argv)
 #endif
     // Alloco e inizializzo il buffer
     float *buffer = (float *)malloc(width * height * sizeof(float));
-    unsigned char *bufferCount = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+    unsigned char *buffer_count = (unsigned char *)malloc(width * height * sizeof(unsigned char));
     int pos = -1;
 
-    if (buffer == NULL || bufferCount == NULL)
+    if (buffer == NULL || buffer_count == NULL)
     {
         fprintf(stderr, "Could not create image buffer\n");
         return -2;
@@ -302,7 +210,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < width * height; i++)
     {
         buffer[i] = -1.0;
-        bufferCount[i] = 0;
+        buffer_count[i] = 0;
     }
 
     for (auto &x : map_points)
@@ -312,17 +220,17 @@ int main(int argc, char **argv)
             buffer[pos] = x.second->getCoverage();
         else
             buffer[pos] += x.second->getCoverage();
-        bufferCount[pos]++;
+        buffer_count[pos]++;
     }
 
     // Creo l'immagine
     cout << "Creazione immagine"
          << "\n";
-    int result = writeImage(output_file, width, height, buffer, bufferCount, output_file);
+    int result = writeImage(output_file, width, height, buffer, buffer_count, output_file);
 
     // Free up the memorty used to store the image
     free(buffer);
-    free(bufferCount);
+    free(buffer_count);
     cout << "Fine"
          << "\n";
 #if TIME
@@ -333,3 +241,162 @@ int main(int argc, char **argv)
 #endif
     return 0;
 }
+
+inline void setRGB(png_byte *ptr, float val, unsigned char count)
+{
+    // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
+    if (val != -1.0)
+    {
+        val = val / count;
+        ptr[0] = (1 - val) * 255;
+        ptr[1] = val * 255;
+        ptr[2] = 0;
+    }
+    else
+    {
+        ptr[0] = ptr[1] = ptr[2] = 255;
+    }
+
+    // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
+}
+
+int writeImage(char *filename, int width, int height, float *buffer, unsigned char *buffer_count, char *title)
+{
+    int code = 0;
+    FILE *fp = NULL;
+    png_structp png_ptr = NULL;
+    png_infop info_ptr = NULL;
+#if !THREAD
+    png_bytep row = NULL;
+#endif
+
+    // Open file for writing (binary mode)
+    fp = fopen(filename, "wb");
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Could not open file %s for writing\n", filename);
+        code = 1;
+        finalise(fp, info_ptr, png_ptr);
+    }
+
+    // Initialize write structure
+    png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (png_ptr == NULL)
+    {
+        fprintf(stderr, "Could not allocate write struct\n");
+        code = 1;
+        finalise(fp, info_ptr, png_ptr);
+    }
+
+    // Initialize info structure
+    info_ptr = png_create_info_struct(png_ptr);
+    if (info_ptr == NULL)
+    {
+        fprintf(stderr, "Could not allocate info struct\n");
+        code = 1;
+        finalise(fp, info_ptr, png_ptr);
+    }
+
+    // Setup Exception handling
+    if (setjmp(png_jmpbuf(png_ptr)))
+    {
+        fprintf(stderr, "Error during png creation\n");
+        code = 1;
+        finalise(fp, info_ptr, png_ptr);
+    }
+
+    png_init_io(png_ptr, fp);
+
+    // Write header (8 bit colour depth)
+    png_set_IHDR(png_ptr, info_ptr, width, height,
+                 8, PNG_COLOR_TYPE_RGB, PNG_INTERLACE_NONE,
+                 PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+    // Set title
+    if (title != NULL)
+    {
+        png_text title_text;
+        title_text.compression = PNG_TEXT_COMPRESSION_NONE;
+        title_text.key = TITLE;
+        title_text.text = title;
+        png_set_text(png_ptr, info_ptr, &title_text, 1);
+    }
+
+    png_write_info(png_ptr, info_ptr);
+
+#if THREAD
+    int x, y;
+    std::thread threads[N_THREADS];
+    for (y = 0; y < height; y++)
+    {
+        for(int i = 0; i < N_THREADS; i++, y++)
+            threads[i] = std::thread(thread_function, buffer, buffer_count, width, y, threads, i, png_ptr);
+           // thread t = std::thread(thread_function, std::ref(buffer), std::ref(buffer_count), std::ref(width), std::ref(y), std::ref(threads), std::ref(i), std::ref(png_ptr));
+
+        threads[N_THREADS - 1].join();
+    }
+#else
+    // Allocate memory for one row (3 bytes per pixel - RGB)
+    row = (png_bytep)malloc(3 * width * sizeof(png_byte));
+
+    // Write image data
+    int x, y;
+    for (y = 0; y < height; y++)
+    {
+        for (x = 0; x < width; x++)
+        {
+#if PRINT
+            if (buffer_count[y * width + x] != 0)
+            {
+                printf("%dx%d\t%f\t%d\n", x, y, buffer[y * width + x], buffer_count[y * width + x]);
+            }
+#endif
+            setRGB(&(row[x * 3]), buffer[y * width + x], buffer_count[y * width + x]);
+        }
+        png_write_row(png_ptr, row);
+    }
+#endif
+
+    // End write
+    png_write_end(png_ptr, NULL);
+
+#if !THREAD    
+    if (row != NULL)
+        free(row);
+#endif
+    return code;
+}
+
+void finalise(FILE *fp,png_infop info_ptr, png_structp png_ptr){
+    if (fp != NULL)
+        fclose(fp);
+    if (info_ptr != NULL)
+        png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
+    if (png_ptr != NULL)
+        png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+    exit(-3);
+}
+
+#if THREAD
+void thread_function(float *buffer, unsigned char *buffer_count, int width, int y, std::thread *threads, int thread_id, png_structp png_ptr)
+{
+    png_bytep row = NULL;
+    row = (png_bytep)malloc(3 * width * sizeof(png_byte));
+
+    for (int x = 0; x < width; x++)
+    {
+#if PRINT
+        if (buffer_count[y * width + x] != 0)
+        {
+            printf("%dx%d\t%f\t%d\n", x, y, buffer[y * width + x], buffer_count[y * width + x]);
+        }
+#endif
+        setRGB(&(row[x * 3]), buffer[y * width + x], buffer_count[y * width + x]);
+    }
+    if(thread_id != 0)
+        threads[thread_id-1].join();
+    
+    png_write_row(png_ptr, row);
+    free(row);
+}
+#endif
