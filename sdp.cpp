@@ -1,7 +1,7 @@
 #define PRINT 0 // Per debug, stampa alcuni dati extra
 #define TIME 0  // Per calcolo tempo esecuzione
 #define THREAD 0
-
+#define BOOST 1 // Libreria per la gestione degli argomenti.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +20,10 @@
 #define N_THREADS 2
 #include <thread>
 #endif
+#if BOOST
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+#endif
 #include "Point.h"
 
 #define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
@@ -34,15 +38,18 @@ float MAX_HEIGHT = 0;
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
 inline void setRGB(png_byte *ptr, float val, unsigned char count);
 int writeImage(char *filename, int width, int height, float *buffer, unsigned char *buffer_count, char *title);
-void finalise(FILE *fp,png_infop info_ptr, png_structp png_ptr);
-
+void finalise(FILE *fp, png_infop info_ptr, png_structp png_ptr);
 
 int main(int argc, char **argv)
 {
 #if TIME
     auto start = chrono::steady_clock::now();
 #endif
+#if BOOST
+    std::string cell_file, coverage_file, output_file;
+#else
     char cell_file[MAX_STR + 1], coverage_file[MAX_STR + 1], output_file[MAX_STR + 1];
+#endif
     int width, height;
 
     std::ifstream file_pointer;
@@ -53,7 +60,61 @@ int main(int argc, char **argv)
     float coverage;
 
     std::unordered_map<std::string, Point *>::iterator it;
+#if BOOST
+    //Command line argument handling
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("CELL_FILE,d", po::value<string>(), "path to cell file")
+        ("COVERAGE_FILE,c", po::value<string>(), "path to coverage file")
+        ("OUTPUT_FILE,o", po::value<string>(), "path to output file")
+        ("HEIGHTxWIDTH,r", po::value<string>(), "size of the image");
 
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+
+    if (vm.count("CELL_FILE"))
+    {
+        cell_file = vm["CELL_FILE"].as<string>();
+    }
+    else
+    {
+        fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
+        return -1;
+    }
+
+    if (vm.count("COVERAGE_FILE"))
+    {
+        coverage_file = vm["COVERAGE_FILE"].as<string>();
+    }
+    else
+    {
+        fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
+        return -1;
+    }
+
+    if (vm.count("OUTPUT_FILE"))
+    {
+        output_file = vm["OUTPUT_FILE"].as<string>();
+    }
+    else
+    {
+        fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
+        return -1;
+    }
+
+    if (vm.count("HEIGHTxWIDTH"))
+    {
+        std::string dim = vm["HEIGHTxWIDTH"].as<string>();
+        height = stoi(dim.substr(0, dim.find("x")));
+        width = stoi(dim);
+    }
+    else
+    {
+        fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
+        return -1;
+    }
+#else
     if (argc != (1 + 2 + 2 + 2 + 2))
     {
         fprintf(stderr, "USAGE ERROR: %s -d CELL_FILE -c COVERAGE_FILE -o OUTPUT_FILE -r HEIGHTxWIDTH", argv[0]);
@@ -108,7 +169,7 @@ int main(int argc, char **argv)
         height = atoi(strtok(argv[8], "x"));
         width = atoi(strtok(NULL, "x"));
     }
-
+#endif
     //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string, Point>));
 
     // Leggo il file dei segnali
@@ -224,7 +285,9 @@ int main(int argc, char **argv)
     // Creo l'immagine
     cout << "Creazione immagine"
          << "\n";
-    int result = writeImage(output_file, width, height, buffer, buffer_count, output_file);
+    char tmp[MAX_STR + 1];
+    strcpy(tmp, output_file.c_str());
+    int result = writeImage(tmp, width, height, buffer, buffer_count, tmp);
 
     // Free up the memorty used to store the image
     free(buffer);
@@ -266,7 +329,6 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
     png_infop info_ptr = NULL;
 
     png_bytep row = NULL;
-
 
     // Open file for writing (binary mode)
     fp = fopen(filename, "wb");
@@ -322,7 +384,6 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
 
     png_write_info(png_ptr, info_ptr);
 
-
     // Allocate memory for one row (3 bytes per pixel - RGB)
     row = (png_bytep)malloc(3 * width * sizeof(png_byte));
 
@@ -345,14 +406,15 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
 
     // End write
     png_write_end(png_ptr, NULL);
-  
+
     if (row != NULL)
         free(row);
 
     return code;
 }
 
-void finalise(FILE *fp,png_infop info_ptr, png_structp png_ptr){
+void finalise(FILE *fp, png_infop info_ptr, png_structp png_ptr)
+{
     if (fp != NULL)
         fclose(fp);
     if (info_ptr != NULL)
