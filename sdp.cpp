@@ -2,6 +2,9 @@
 #define TIME 0  // Per calcolo tempo esecuzione
 #define THREAD 0
 #define BOOST 1 // Libreria per la gestione degli argomenti.
+#define RESIZE_IMG 0
+#define RESIZE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +16,8 @@
 #include <fstream>
 #include <unordered_map>
 #include <utility>
+
+using namespace std;
 #if TIME
 #include <chrono>
 #endif
@@ -24,12 +29,14 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 #endif
+#if RESIZE_IMG
+#include <opencv2/opencv.hpp>
+using namespace cv;
+#endif
 #include "Point.h"
 
 #define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
 #define TITLE "Title"
-
-using namespace std;
 
 // Questi ci serviranno per riscalare l'immagine.
 float MAX_WIDTH = 0;
@@ -53,21 +60,17 @@ int main(int argc, char **argv)
     int width, height;
 
     std::ifstream file_pointer;
-    std::unordered_map<std::string, Point *> map_points;
+    std::unordered_map<std::string, PointClass *> map_points;
     std::string signal_name;
 
     float x, y;
     float coverage;
 
-    std::unordered_map<std::string, Point *>::iterator it;
+    std::unordered_map<std::string, PointClass *>::iterator it;
 #if BOOST
     //Command line argument handling
     po::options_description desc("Allowed options");
-    desc.add_options()
-        ("CELL_FILE,d", po::value<string>(), "path to cell file")
-        ("COVERAGE_FILE,c", po::value<string>(), "path to coverage file")
-        ("OUTPUT_FILE,o", po::value<string>(), "path to output file")
-        ("HEIGHTxWIDTH,r", po::value<string>(), "size of the image");
+    desc.add_options()("CELL_FILE,d", po::value<string>(), "path to cell file")("COVERAGE_FILE,c", po::value<string>(), "path to coverage file")("OUTPUT_FILE,o", po::value<string>(), "path to output file")("HEIGHTxWIDTH,r", po::value<string>(), "size of the image");
 
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -170,7 +173,7 @@ int main(int argc, char **argv)
         width = atoi(strtok(NULL, "x"));
     }
 #endif
-    //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string, Point>));
+    //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string,   PointClass>));
 
     // Leggo il file dei segnali
     cout << "Lettura file segnali"
@@ -187,10 +190,10 @@ int main(int argc, char **argv)
                 MAX_WIDTH = x;
             if (y > MAX_HEIGHT)
                 MAX_HEIGHT = y;
-            // std::pair<std::string,Point *> my_point (signal_name,new Point(x,y)); // alternativa alla riga di sotto
+            // std::pair<std::string,  PointClass *> my_point (signal_name,new  PointClass(x,y)); // alternativa alla riga di sotto
             // map_points.insert(my_point);
 
-            map_points.insert(it, std::pair<std::string, Point *>(signal_name, new Point(x, y)));
+            map_points.insert(it, std::pair<std::string, PointClass *>(signal_name, new PointClass(x, y)));
         }
     }
 
@@ -241,7 +244,8 @@ int main(int argc, char **argv)
 #endif
 
     // Se l'immagine è più piccola del MAX_WIDTH, ridimensiono l'immagine
-    if (MAX_WIDTH < width)
+    /*
+   if (MAX_WIDTH < width)
     {
         width = MAX_WIDTH + 1;
     }
@@ -249,15 +253,20 @@ int main(int argc, char **argv)
     {
         height = MAX_HEIGHT + 1;
     }
-
+    */
 #if PRINT
     printf("WIDTH x HEIGHT: %d x %d\n", width, height);
     //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
     printf("BUFFER SIZE: %d\n", width * height);
 #endif
     // Alloco e inizializzo il buffer
+#if !RESIZE
     float *buffer = (float *)malloc(width * height * sizeof(float));
     unsigned char *buffer_count = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+#else
+    float *buffer = (float *)malloc((MAX_WIDTH + 1) * (MAX_HEIGHT + 1) * sizeof(float));
+    unsigned char *buffer_count = (unsigned char *)malloc((MAX_WIDTH + 1) * (MAX_HEIGHT + 1) * sizeof(unsigned char));
+#endif
     int pos = -1;
 
     if (buffer == NULL || buffer_count == NULL)
@@ -265,8 +274,11 @@ int main(int argc, char **argv)
         fprintf(stderr, "Could not create image buffer\n");
         return -2;
     }
-
+#if !RESIZE
     for (int i = 0; i < width * height; i++)
+#else
+    for (int i = 0; i < (MAX_WIDTH + 1) * (MAX_HEIGHT + 1); i++)
+#endif
     {
         buffer[i] = -1.0;
         buffer_count[i] = 0;
@@ -274,19 +286,121 @@ int main(int argc, char **argv)
 
     for (auto &x : map_points)
     {
+#if !RESIZE
         pos = x.second->getPosition(width);
+#else
+        pos = x.second->getPosition(MAX_WIDTH+1);
+#endif  
         if (buffer[pos] == -1)
             buffer[pos] = x.second->getCoverage();
         else
             buffer[pos] += x.second->getCoverage();
         buffer_count[pos]++;
+
+        cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
     }
 
+
+#if RESIZE
+    
+
+    float resize_factor_width = width / (MAX_WIDTH + 1);
+    float resize_factor_height = height / (MAX_HEIGHT + 1);
+    resize_factor_height = resize_factor_width = 2;
+    cout << (MAX_WIDTH + 1) << "\t" << (MAX_HEIGHT + 1) << endl;
+    width = (MAX_WIDTH + 1) * 2;
+    height = (MAX_HEIGHT + 1) * 2;
+    float *buffer_resize = (float *)malloc(width * height * sizeof(float));
+    unsigned char *buffer_count_resize = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+
+    for (int i = 0; i < width * height; i++)
+    {
+        buffer_resize[i] = -1.0;
+        buffer_count_resize[i] = 0;
+    }
+
+    float rw, rh;
+    int new_pos;
+
+    for (auto &x : map_points)
+    {
+        //(this->y * width) + this->x;
+        pos = x.second->getPosition(MAX_WIDTH + 1);
+        
+        rh = resize_factor_height;
+        float x1 = x.second->getX();
+        float y1 = x.second->getY();
+
+        for (int h = 0; h < round(resize_factor_height); h++, rh--)
+        {
+            rw = resize_factor_width;
+            for (int w = 0; w < round(resize_factor_width); w++, rw--)
+            {
+                //new_pos = (int)(((y1 + h)*width) * resize_factor_width * resize_factor_height + w x1 * resize_factor_height);
+                //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
+                new_pos = (int)((resize_factor_height * y1 + h) * resize_factor_width * (MAX_WIDTH + 1) + (resize_factor_width * x1 + w));
+                //cout << rw << "\t" << rh << endl;
+                cout << new_pos << "\t";
+                if (rw >= 1 && rh >= 1)
+                {
+                    buffer_resize[new_pos] = buffer[pos];
+                    buffer_count_resize[new_pos] = buffer_count[pos];
+                    //buffer_resize[pos + width * h + w] = buffer[pos];
+                    //buffer_count_resize[pos + width * h + w] = buffer_count[pos];
+                }
+                else if (rw < 1 && rh >= 1)
+                {
+                    buffer_resize[new_pos] = buffer[pos] * rw;
+                    buffer_count_resize[new_pos] = buffer_count[pos] * rw;
+                    //  buffer_resize[pos + width * h + w] = buffer[pos] * rw;
+                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rw;
+                }
+                else if (rh < 1 && rw >= 1)
+                {
+                    buffer_resize[new_pos] = buffer[pos] * rh;
+                    buffer_count_resize[new_pos] = buffer_count[pos] * rh;
+                    // buffer_resize[pos + width * h + w] = buffer[pos] * rh;
+                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rh;
+                }
+                else
+                {
+                    buffer_resize[new_pos] = buffer[pos] * rw * rh;
+                    buffer_count_resize[new_pos] = buffer_count[pos] * rw * rh;
+                    // buffer_resize[pos + width * h + w] = buffer[pos] * rw * rh;
+                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rw * rh;
+                }
+                cout <<  buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] <<"P" << buffer_count[pos] << endl;
+            }
+        }
+    }
+
+    free(buffer);
+    free(buffer_count);
+
+    cout << "Creazione immagine"
+         << "\n";
+    char tmp[MAX_STR + 1];
+
+    output_file = "resize_" + output_file;
+
+    strcpy(tmp, output_file.c_str());
+
+    int result = writeImage(tmp, width, height, buffer_resize, buffer_count_resize, tmp);
+
+    // Free up the memorty used to store the image
+
+    // free(buffer_resize);
+    // free(buffer_count_resize);
+
+    cout << "Fine"
+         << "\n";
+#else
     // Creo l'immagine
     cout << "Creazione immagine"
          << "\n";
     char tmp[MAX_STR + 1];
     strcpy(tmp, output_file.c_str());
+    //int result = writeImage(tmp, MAX_WIDTH + 1, MAX_HEIGHT + 1 ,  buffer, buffer_count, tmp);
     int result = writeImage(tmp, width, height, buffer, buffer_count, tmp);
 
     // Free up the memorty used to store the image
@@ -294,6 +408,41 @@ int main(int argc, char **argv)
     free(buffer_count);
     cout << "Fine"
          << "\n";
+#endif
+
+    // Ridimensionamento dell'immagine
+#if RESIZE_IMG
+    output_file = "_DSC9387.jpg";
+
+    //Mat image = Mat::zeros(Size(width,height),CV_8UC1);
+    Mat image(width, height, CV_8UC3, Scalar(255, 255, 255));
+    float val = 0.0;
+    for (auto &x : map_points)
+    {
+        Vec3b &color = image.at<Vec3b>(x.second->getY(), x.second->getX());
+
+        val = x.second->getCoverage() / buffer_count[x.second->getPosition(width)];
+
+        color[0] = (int)(1 - val) * 255;
+        color[1] = (int)val * 255;
+        color[2] = 0;
+    }
+    imwrite("test6.jpg", image);
+
+    image = imread("test6.jpg", 1);
+    cout << "\nWidth : " << image.size().width << endl;
+    cout << "Height: " << image.size().height << endl;
+    //image.size[0] = width;
+    //image.size[1] = height;
+    //cout << "\nWidth : " << image.size().width << endl;
+    //cout << "Height: " << image.size().height << endl;
+
+    Mat resized_down;
+    width = 100;
+    height = 100;
+    resize(image, resized_down, Size(), 10.0, 10.0, INTER_LINEAR);
+    imwrite("output_file.jpg", resized_down);
+#endif
 #if TIME
     auto end = chrono::steady_clock::now();
     cout << "Elapsed time in seconds: "
@@ -399,6 +548,7 @@ int writeImage(char *filename, int width, int height, float *buffer, unsigned ch
                 printf("%dx%d\t%f\t%d\n", x, y, buffer[y * width + x], buffer_count[y * width + x]);
             }
 #endif
+
             setRGB(&(row[x * 3]), buffer[y * width + x], buffer_count[y * width + x]);
         }
         png_write_row(png_ptr, row);
