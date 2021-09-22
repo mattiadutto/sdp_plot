@@ -44,7 +44,7 @@ float MAX_HEIGHT = 0;
 
 // writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
 inline void setRGB(png_byte *ptr, float val, unsigned char count);
-int writeImage(char *filename, int width, int height, float *buffer, unsigned char *buffer_count, char *title);
+int writeImage(char *filename, int width, int height, float *buffer, float *buffer_count, char *title);
 void finalise(FILE *fp, png_infop info_ptr, png_structp png_ptr);
 
 int main(int argc, char **argv)
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
 #else
     char cell_file[MAX_STR + 1], coverage_file[MAX_STR + 1], output_file[MAX_STR + 1];
 #endif
-    int width, height;
+    float width, height;
 
     std::ifstream file_pointer;
     std::unordered_map<std::string, PointClass *> map_points;
@@ -109,8 +109,9 @@ int main(int argc, char **argv)
     if (vm.count("HEIGHTxWIDTH"))
     {
         std::string dim = vm["HEIGHTxWIDTH"].as<string>();
+        width = stoi(dim.substr(0, dim.find("x")));
+        dim.erase(0, dim.find("x") + 1);
         height = stoi(dim.substr(0, dim.find("x")));
-        width = stoi(dim);
     }
     else
     {
@@ -243,17 +244,6 @@ int main(int argc, char **argv)
     }
 #endif
 
-    // Se l'immagine è più piccola del MAX_WIDTH, ridimensiono l'immagine
-    /*
-   if (MAX_WIDTH < width)
-    {
-        width = MAX_WIDTH + 1;
-    }
-    if (MAX_HEIGHT < height)
-    {
-        height = MAX_HEIGHT + 1;
-    }
-    */
 #if PRINT
     printf("WIDTH x HEIGHT: %d x %d\n", width, height);
     //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
@@ -289,87 +279,108 @@ int main(int argc, char **argv)
 #if !RESIZE
         pos = x.second->getPosition(width);
 #else
-        pos = x.second->getPosition(MAX_WIDTH+1);
-#endif  
+        pos = x.second->getPosition(MAX_WIDTH + 1);
+#endif
         if (buffer[pos] == -1)
             buffer[pos] = x.second->getCoverage();
         else
             buffer[pos] += x.second->getCoverage();
         buffer_count[pos]++;
 
-        cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
+        //cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
     }
 
-
 #if RESIZE
-    
+    float resize_factor_width = (float)width / (MAX_WIDTH + 1);
+    float resize_factor_height = (float)height / (MAX_HEIGHT + 1);
 
-    float resize_factor_width = width / (MAX_WIDTH + 1);
-    float resize_factor_height = height / (MAX_HEIGHT + 1);
-    resize_factor_height = resize_factor_width = 2;
+    // Attualmente non gestisce il downscaling.
+    if(resize_factor_width < 1)
+        width = MAX_WIDTH + 1;
+    if(resize_factor_height < 1)
+        height = MAX_HEIGHT + 1;
+
+    // Per limitare le modifiche se il ridimensionamento è sotto il 20% non viene effettuato
+    if(resize_factor_width - 1 < 0.2)
+        resize_factor_width = 1;
+    if(resize_factor_height - 1 < 0.2)
+        resize_factor_height = 1;
+
+    cout << width << "\t" << height << endl;
     cout << (MAX_WIDTH + 1) << "\t" << (MAX_HEIGHT + 1) << endl;
-    width = (MAX_WIDTH + 1) * 2;
-    height = (MAX_HEIGHT + 1) * 2;
+    cout << "Resize factor: " << "\t" << resize_factor_width << "\t" << resize_factor_height << endl;
+    cout << "Rounded: " << "\t" << ceil(resize_factor_width) << "\t" << ceil(resize_factor_height) << endl;
+    
+    //width = (MAX_WIDTH + 1) * resize_factor_width;
+    //height = (MAX_HEIGHT + 1) * resize_factor_height;
+    
+    cout << width << "\t" << height << endl;
+
+    // Dichiaro vettori di supporto per il resize
     float *buffer_resize = (float *)malloc(width * height * sizeof(float));
-    unsigned char *buffer_count_resize = (unsigned char *)malloc(width * height * sizeof(unsigned char));
+    float *buffer_count_resize = (float *)malloc(width * height * sizeof(float));
 
     for (int i = 0; i < width * height; i++)
     {
-        buffer_resize[i] = -1.0;
+        buffer_resize[i] = 0.0;
         buffer_count_resize[i] = 0;
     }
 
-    float rw, rh;
-    int new_pos;
+    float rw, rh, x1, y1;
+    int new_pos, new_height, new_height_cmp, prev, new_width;
 
     for (auto &x : map_points)
     {
         //(this->y * width) + this->x;
         pos = x.second->getPosition(MAX_WIDTH + 1);
-        
-        rh = resize_factor_height;
-        float x1 = x.second->getX();
-        float y1 = x.second->getY();
 
-        for (int h = 0; h < round(resize_factor_height); h++, rh--)
+        rh = resize_factor_height;
+        x1 = x.second->getX();
+        y1 = x.second->getY();
+
+        
+
+        for (int h = 0; h < ceil(resize_factor_height); h++, rh--)
         {
             rw = resize_factor_width;
-            for (int w = 0; w < round(resize_factor_width); w++, rw--)
+            prev = -1;
+            for (int w = 0; w < ceil(resize_factor_width); w++, rw--)
             {
-                //new_pos = (int)(((y1 + h)*width) * resize_factor_width * resize_factor_height + w x1 * resize_factor_height);
                 //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
-                new_pos = (int)((resize_factor_height * y1 + h) * resize_factor_width * (MAX_WIDTH + 1) + (resize_factor_width * x1 + w));
+                new_pos = (ceil(resize_factor_height * y1 + h) * width) + round(resize_factor_width * x1 + w);
+                cout << "NEW_WIDTH:\t" << round(resize_factor_width * x1 + w) <<endl;
+                
                 //cout << rw << "\t" << rh << endl;
-                cout << new_pos << "\t";
-                if (rw >= 1 && rh >= 1)
+            
+                new_width = new_pos % (int)width;
+
+                //cout << pos << "\t" << x1 << "\t"<< y1 << "\t" << new_pos << "\t"<< new_width << "\t" << round(new_pos/width) << "\t";
+                if (new_pos <= width * height && (prev < new_width || prev == -1)) // per evitare che vada a sporcare la prima fila sia verticale sia orizzontale.
                 {
-                    buffer_resize[new_pos] = buffer[pos];
-                    buffer_count_resize[new_pos] = buffer_count[pos];
-                    //buffer_resize[pos + width * h + w] = buffer[pos];
-                    //buffer_count_resize[pos + width * h + w] = buffer_count[pos];
+                    if (rw >= 1 && rh >= 1)
+                    {
+                        buffer_resize[new_pos] += buffer[pos];
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        
+                    }
+                    else if (rw < 1 && rh >= 1)
+                    {
+                        buffer_resize[new_pos] += buffer[pos] * rw;
+                        buffer_count_resize[new_pos] += buffer_count[pos] ;
+                    }
+                    else if (rh < 1 && rw >= 1)
+                    {
+                        buffer_resize[new_pos] += buffer[pos] * rh;
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                    }
+                    else
+                    {
+                        buffer_resize[new_pos] += buffer[pos] * rw * rh;
+                        buffer_count_resize[new_pos] += buffer_count[pos] ;
+                    }
+                    prev = new_width;
                 }
-                else if (rw < 1 && rh >= 1)
-                {
-                    buffer_resize[new_pos] = buffer[pos] * rw;
-                    buffer_count_resize[new_pos] = buffer_count[pos] * rw;
-                    //  buffer_resize[pos + width * h + w] = buffer[pos] * rw;
-                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rw;
-                }
-                else if (rh < 1 && rw >= 1)
-                {
-                    buffer_resize[new_pos] = buffer[pos] * rh;
-                    buffer_count_resize[new_pos] = buffer_count[pos] * rh;
-                    // buffer_resize[pos + width * h + w] = buffer[pos] * rh;
-                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rh;
-                }
-                else
-                {
-                    buffer_resize[new_pos] = buffer[pos] * rw * rh;
-                    buffer_count_resize[new_pos] = buffer_count[pos] * rw * rh;
-                    // buffer_resize[pos + width * h + w] = buffer[pos] * rw * rh;
-                    // buffer_count_resize[pos + width * h + w] = buffer_count[pos] * rw * rh;
-                }
-                cout <<  buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] <<"P" << buffer_count[pos] << endl;
+                //cout << buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] << "P" << buffer_count[pos] << endl;
             }
         }
     }
@@ -387,10 +398,8 @@ int main(int argc, char **argv)
 
     int result = writeImage(tmp, width, height, buffer_resize, buffer_count_resize, tmp);
 
-    // Free up the memorty used to store the image
-
-    // free(buffer_resize);
-    // free(buffer_count_resize);
+    free(buffer_resize);
+    free(buffer_count_resize);
 
     cout << "Fine"
          << "\n";
@@ -452,25 +461,31 @@ int main(int argc, char **argv)
     return 0;
 }
 
-inline void setRGB(png_byte *ptr, float val, unsigned char count)
+inline void setRGB(png_byte *ptr, float val, float count)
 {
     // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
-    if (val != -1.0)
-    {
-        val = val / count;
-        ptr[0] = (1 - val) * 255;
-        ptr[1] = val * 255;
+    float value;
+    if (count != 0.0){
+        if(count != 1)
+            value = val / count;
+        else
+            value = val;
+        //cout << value << "\t";
+        ptr[0] = (1 - value) * 255;
+        ptr[1] = value * 255;
         ptr[2] = 0;
+
+        //printf("%f\t%f\t%d %d %d\n", val, count, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
     }
     else
     {
         ptr[0] = ptr[1] = ptr[2] = 255;
     }
 
-    // printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
+    //printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
 }
 
-int writeImage(char *filename, int width, int height, float *buffer, unsigned char *buffer_count, char *title)
+int writeImage(char *filename, int width, int height, float *buffer, float *buffer_count, char *title)
 {
     int code = 0;
     FILE *fp = NULL;
