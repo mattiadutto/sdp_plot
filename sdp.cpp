@@ -2,7 +2,6 @@
 #define TIME 0  // Per calcolo tempo esecuzione
 #define THREAD 0
 #define BOOST 1 // Libreria per la gestione degli argomenti.
-#define RESIZE_IMG 0
 #define RESIZE 1
 
 #include <stdio.h>
@@ -28,10 +27,6 @@ using namespace std;
 #if BOOST
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
-#endif
-#if RESIZE_IMG
-#include <opencv2/opencv.hpp>
-using namespace cv;
 #endif
 #include "Point.h"
 
@@ -348,7 +343,7 @@ int main(int argc, char **argv)
             {
                 //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
                 new_pos = (ceil(resize_factor_height * y1 + h) * width) + round(resize_factor_width * x1 + w);
-                cout << "NEW_WIDTH:\t" << round(resize_factor_width * x1 + w) <<endl;
+                //cout << "NEW_WIDTH:\t" << round(resize_factor_width * x1 + w) <<endl;
                 
                 //cout << rw << "\t" << rh << endl;
             
@@ -419,39 +414,6 @@ int main(int argc, char **argv)
          << "\n";
 #endif
 
-    // Ridimensionamento dell'immagine
-#if RESIZE_IMG
-    output_file = "_DSC9387.jpg";
-
-    //Mat image = Mat::zeros(Size(width,height),CV_8UC1);
-    Mat image(width, height, CV_8UC3, Scalar(255, 255, 255));
-    float val = 0.0;
-    for (auto &x : map_points)
-    {
-        Vec3b &color = image.at<Vec3b>(x.second->getY(), x.second->getX());
-
-        val = x.second->getCoverage() / buffer_count[x.second->getPosition(width)];
-
-        color[0] = (int)(1 - val) * 255;
-        color[1] = (int)val * 255;
-        color[2] = 0;
-    }
-    imwrite("test6.jpg", image);
-
-    image = imread("test6.jpg", 1);
-    cout << "\nWidth : " << image.size().width << endl;
-    cout << "Height: " << image.size().height << endl;
-    //image.size[0] = width;
-    //image.size[1] = height;
-    //cout << "\nWidth : " << image.size().width << endl;
-    //cout << "Height: " << image.size().height << endl;
-
-    Mat resized_down;
-    width = 100;
-    height = 100;
-    resize(image, resized_down, Size(), 10.0, 10.0, INTER_LINEAR);
-    imwrite("output_file.jpg", resized_down);
-#endif
 #if TIME
     auto end = chrono::steady_clock::now();
     cout << "Elapsed time in seconds: "
