@@ -15,6 +15,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <utility>
+#include <cstdlib>
 
 using namespace std;
 #if TIME
@@ -188,8 +189,10 @@ int main(int argc, char **argv)
                 MAX_HEIGHT = y;
             // std::pair<std::string,  PointClass *> my_point (signal_name,new  PointClass(x,y)); // alternativa alla riga di sotto
             // map_points.insert(my_point);
+            it = map_points.find(signal_name);
 
-            map_points.insert(it, std::pair<std::string, PointClass *>(signal_name, new PointClass(x, y)));
+            if (it == map_points.end() && !file_pointer.eof())
+                map_points.insert(it, std::pair<std::string, PointClass *>(signal_name, new PointClass(x, y)));
         }
     }
 
@@ -283,32 +286,34 @@ int main(int argc, char **argv)
         buffer_count[pos]++;
 
         //cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
+        //cout << x.second->getCoverage() << endl;
     }
 
 #if RESIZE
     float resize_factor_width = (float)width / (MAX_WIDTH + 1);
     float resize_factor_height = (float)height / (MAX_HEIGHT + 1);
 
-    // Attualmente non gestisce il downscaling.
-    if(resize_factor_width < 1)
-        width = MAX_WIDTH + 1;
-    if(resize_factor_height < 1)
-        height = MAX_HEIGHT + 1;
-
     // Per limitare le modifiche se il ridimensionamento è sotto il 20% non viene effettuato
-    if(resize_factor_width - 1 < 0.2)
+    //if (resize_factor_width - 1 > 0 && resize_factor_width - 1 < 0.2)
+    if (abs(1 - resize_factor_width) < 0.2)
+    {
         resize_factor_width = 1;
-    if(resize_factor_height - 1 < 0.2)
+        width = MAX_WIDTH + 1;
+    }
+    //if (resize_factor_height - 1 > 0 && resize_factor_height - 1 < 0.2)
+    if (abs(1 - resize_factor_height) < 0.2)
+    {
         resize_factor_height = 1;
+        height = MAX_HEIGHT + 1;
+    }
 
     cout << width << "\t" << height << endl;
     cout << (MAX_WIDTH + 1) << "\t" << (MAX_HEIGHT + 1) << endl;
-    cout << "Resize factor: " << "\t" << resize_factor_width << "\t" << resize_factor_height << endl;
-    cout << "Rounded: " << "\t" << ceil(resize_factor_width) << "\t" << ceil(resize_factor_height) << endl;
-    
-    //width = (MAX_WIDTH + 1) * resize_factor_width;
-    //height = (MAX_HEIGHT + 1) * resize_factor_height;
-    
+    cout << "Resize factor: "
+         << "\t" << resize_factor_width << "\t" << resize_factor_height << endl;
+    cout << "Rounded: "
+         << "\t" << ceil(resize_factor_width) << "\t" << ceil(resize_factor_height) << endl;
+
     cout << width << "\t" << height << endl;
 
     // Dichiaro vettori di supporto per il resize
@@ -323,17 +328,15 @@ int main(int argc, char **argv)
 
     float rw, rh, x1, y1;
     int new_pos, new_height, new_height_cmp, prev, new_width;
+    float diff, diff_width, diff_height;
 
     for (auto &x : map_points)
     {
-        //(this->y * width) + this->x;
         pos = x.second->getPosition(MAX_WIDTH + 1);
 
         rh = resize_factor_height;
         x1 = x.second->getX();
         y1 = x.second->getY();
-
-        
 
         for (int h = 0; h < ceil(resize_factor_height); h++, rh--)
         {
@@ -342,43 +345,278 @@ int main(int argc, char **argv)
             for (int w = 0; w < ceil(resize_factor_width); w++, rw--)
             {
                 //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
-                new_pos = (ceil(resize_factor_height * y1 + h) * width) + round(resize_factor_width * x1 + w);
-                //cout << "NEW_WIDTH:\t" << round(resize_factor_width * x1 + w) <<endl;
-                
-                //cout << rw << "\t" << rh << endl;
-            
+                new_pos = floor(floor(resize_factor_width * x1) + w + (floor(resize_factor_height * y1) + h) * width);
+                //diff = (float)(resize_factor_width * x1 + w) + (float)((resize_factor_height * y1 + h) * width) - new_pos;
                 new_width = new_pos % (int)width;
 
-                //cout << pos << "\t" << x1 << "\t"<< y1 << "\t" << new_pos << "\t"<< new_width << "\t" << round(new_pos/width) << "\t";
+                diff_width = (resize_factor_width * x1 + w) - new_width;
+                diff_height = (resize_factor_height * y1) - floor(resize_factor_height * y1);
+
+                new_height = floor(resize_factor_height * y1 + h);
+                //cout << new_pos << "\t" << (resize_factor_width * x1) << "\t" << (float)(resize_factor_height * y1 * width) << "\t" << diff << "\t" << rw << "\t\t" << (ceil(resize_factor_width) - resize_factor_width) << "\t\t";
+                //cout << diff << "\t\t" << pos << "\t" << x1 << "\t" << y1 << "\t" << new_pos << "\t" << new_width << "\t" << round(new_pos / width) << "\t";
                 if (new_pos <= width * height && (prev < new_width || prev == -1)) // per evitare che vada a sporcare la prima fila sia verticale sia orizzontale.
                 {
                     if (rw >= 1 && rh >= 1)
                     {
-                        buffer_resize[new_pos] += buffer[pos];
-                        buffer_count_resize[new_pos] += buffer_count[pos];
-                        
+                        float tmp_pos = buffer[pos];
+                        float tmp_count = buffer_count[pos];
+                        if (new_width != ((resize_factor_width * x1) + w))
+                        {
+                            buffer_resize[new_pos] += buffer[pos] * (1 - diff_width);
+                            buffer_count_resize[new_pos] += buffer_count[pos]; // * (1-diff_width);
+                            if (new_width + 1 <= width)
+                            {
+                                buffer_resize[new_pos + 1] += buffer[pos] * diff_width;
+                                buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
+                            }
+
+                            if (new_height != (resize_factor_height * y1) + h)
+                            {
+                                // Siamo nel caso in cui il pixel va diviso su 4 pixel
+                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height);
+                                buffer_count_resize[new_pos] += buffer_count[pos];
+                                if (new_width + 1 <= width)
+                                {
+                                    buffer_resize[new_pos + 1] += buffer[pos] * (1 - diff_height);
+                                    buffer_count_resize[new_pos + 1] += buffer_count[pos];
+                                }
+                                if (new_pos + (int)width <= width * height)
+                                {
+                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
+                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (1 - diff_width) * diff_height;
+                                    if (new_pos + (int)width + 1 <= width * height)
+                                    {
+                                        buffer_resize[new_pos + (int)width + 1] += buffer[pos] * diff_width * diff_height;
+                                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
+                                    }
+                                }
+                            }
+                        }
+                        else if (new_height != (resize_factor_height * y1) + h)
+                        {
+                            // Siamo divisi in verticale
+                            buffer_resize[new_pos] += buffer[pos] * (1 - diff_height);
+                            buffer_count_resize[new_pos] += buffer_count[pos];
+
+                            if (new_pos + (int)width <= width * height)
+                            {
+                                buffer_resize[new_pos + (int)width] += buffer[pos] * diff_height;
+                                buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
+                            }
+                        }
+                        else
+                        {
+                            buffer_resize[new_pos] += buffer[pos];
+                            buffer_count_resize[new_pos] += buffer_count[pos];
+                        }
                     }
                     else if (rw < 1 && rh >= 1)
                     {
-                        buffer_resize[new_pos] += buffer[pos] * rw;
-                        buffer_count_resize[new_pos] += buffer_count[pos] ;
+                        /*
+                        if (diff != rw)
+                        {
+                            buffer_resize[new_pos] += buffer[pos] * rw * diff;
+                            buffer_resize[new_pos - 1] += buffer[pos] * rw * diff;
+
+                            buffer_count_resize[new_pos] += buffer_count[pos] * diff;
+                            buffer_count_resize[new_pos - 1] += buffer_count[pos] * diff;
+                        }
+                        else*/
+                        if (resize_factor_width < 1 || resize_factor_height < 1)
+                        {
+                            buffer_resize[new_pos] += buffer[pos];
+                            buffer_count_resize[new_pos] += buffer_count[pos];
+                        }
+                        else if (new_width != ((resize_factor_width * x1) + w))
+                        {
+                            if (diff_width <= rw)
+                            {
+                                // aggiunto caso altezza
+                                if (new_height != (resize_factor_height * y1) + h)
+                                {
+                                    buffer_resize[new_pos] += buffer[pos] * rw * (1 - diff_height);
+                                    buffer_count_resize[new_pos] += buffer_count[pos] * rw;
+                                    if (new_pos + width <= width * height)
+                                    {
+                                        buffer_resize[new_pos + (int)width] += buffer[pos] * rw * diff_height;
+                                        buffer_count_resize[new_pos + (int)width] += buffer_count[pos] * rw;
+                                    }
+                                }
+                                else
+                                {
+                                    buffer_resize[new_pos] += buffer[pos] * rw;
+                                    buffer_count_resize[new_pos] += buffer_count[pos] * rw;
+                                }
+                            }
+                            else
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_width) * rw;
+                                if (new_width + 1 <= width)
+                                    buffer_resize[new_pos + 1] += buffer[pos] * diff_width * rw;
+
+                                buffer_count_resize[new_pos] += buffer_count[pos];     // * 0.5;
+                                buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * (0.5 - rw);
+                                // aggiunto caso altezza
+                                if (new_height != (resize_factor_height * y1) + h)
+                                {
+                                    buffer_resize[new_pos] *= (1 - diff_height);
+                                    if (new_width + 1 <= width)
+                                        buffer_resize[new_pos + 1] *= (1 - diff_height);
+
+                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
+                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (1 - diff_width) * diff_height * rw;
+                                    if (new_pos + (int)width + 1 <= width * height)
+                                    {
+                                        buffer_resize[new_pos + (int)width + 1] += buffer[pos] * diff_width * diff_height * rw;
+                                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
+                                    }
+                                }
+                                else
+                                {
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (new_pos <= width * height)
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * rw;
+                                buffer_count_resize[new_pos] += buffer_count[pos]; // *rw;
+                            }
+                        }
                     }
+
                     else if (rh < 1 && rw >= 1)
                     {
-                        buffer_resize[new_pos] += buffer[pos] * rh;
-                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        if (resize_factor_width < 1 || resize_factor_height < 1)
+                        {
+                            buffer_resize[new_pos] += buffer[pos];
+                            buffer_count_resize[new_pos] += buffer_count[pos];
+                        }
+                        else if (new_height != (resize_factor_height * y1) + h)
+                        {
+                            if (diff_height <= rh)
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * rh;
+                                buffer_count_resize[new_pos] += buffer_count[pos] * rh;
+                                // Aggiunto caso larghezza
+                                if (diff_width != 0)
+                                {
+                                    buffer_resize[new_pos] *= (1 - diff_width);
+                                    if (new_width + 1 <= width)
+                                    {
+                                        buffer_resize[new_pos + 1] += buffer[pos] * diff_width * rh;
+                                        buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height) * rh;
+                                if (new_pos + (int)width <= width * height){
+                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (diff_height)*rh;
+                                     buffer_count_resize[new_pos + (int)width] += buffer_count[pos]; // * (0.5 - rh);
+                               
+                                }
+                                buffer_count_resize[new_pos] += buffer_count[pos];              // * 0.5;
+                                // Aggiungere caso larghezza
+                                if (diff_width != 0)
+                                {
+                                    buffer_resize[new_pos] *= (1 - diff_width);
+                                    if(new_pos + 1 <= width){
+                                        buffer_resize[new_pos + 1] += buffer[pos] * (1 - diff_height) * diff_width * rh;
+                                        buffer_count_resize[new_pos] += buffer_count[pos];              // * 0.5;
+                                    }
+
+                                    if (new_pos + (int)width <= width * height)
+                                        buffer_resize[new_pos + (int)width] *= diff_width;
+                                    
+                                    if(new_pos + width + 1 <= width * height){
+                                        buffer_resize[new_pos + (int)width +1] += buffer[pos] * diff_width * (diff_height)*rh ;
+                                     buffer_count_resize[new_pos + (int)width+ 1] += buffer_count[pos]; // * (0.5 - rh);
+                               
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (new_pos <= width * height) // per evitare che vada oltre
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * rh;
+                                buffer_count_resize[new_pos] += buffer_count[pos];
+                            }
+                        }
                     }
                     else
                     {
-                        buffer_resize[new_pos] += buffer[pos] * rw * rh;
-                        buffer_count_resize[new_pos] += buffer_count[pos] ;
+                        if (resize_factor_width < 1 || resize_factor_height < 1)
+                            buffer_resize[new_pos] += buffer[pos];
+                        else
+                        {
+                            // Aggiunti casi altezza e larghezza
+                            if (diff_width != 0)
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_width) * rw * rh;
+                                buffer_count_resize[new_pos] += buffer_count[pos]; // * (1-diff_width);
+                                if (new_width + 1 <= width)
+                                {
+                                    buffer_resize[new_pos + 1] += buffer[pos] * diff_width * rw * rh;
+                                    buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
+                                }
+                            }
+                            if (diff_height != 0)
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height) * rw * rh;
+                                buffer_count_resize[new_pos] += buffer_count[pos];
+
+                                if (new_pos + (int)width <= width * height)
+                                {
+                                    buffer_resize[new_pos + (int)width] += buffer[pos] * diff_height * rw * rh;
+                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
+                                }
+                            }
+                            if (diff_width == 0 && diff_height == 0)
+                            {
+                                buffer_resize[new_pos] += buffer[pos] * rw * rh;
+                                buffer_count_resize[new_pos] += buffer_count[pos];
+                            }
+                        }
                     }
                     prev = new_width;
                 }
-                //cout << buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] << "P" << buffer_count[pos] << endl;
+
+                // cout << buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] << "P" << buffer[pos] << "\t" << buffer_count[pos] << endl;
             }
         }
     }
+#if 1
+    cout.precision(2);
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
+            pos = i * width + j;
+            cout << buffer_resize[pos] << "\t";
+        }
+        cout << endl;
+    }
+#endif
+    cout << endl
+         << endl
+         << endl;
+#if 1
+        for (int i = 0; i < height; i++)
+        {
+            for (int j = 0; j < width; j++)
+            {
+                pos = i * width + j;
+                cout << buffer_count_resize[pos] << "\t";
+            }
+            cout << endl;
+        }
+#endif
 
     free(buffer);
     free(buffer_count);
@@ -427,11 +665,12 @@ inline void setRGB(png_byte *ptr, float val, float count)
 {
     // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
     float value;
-    if (count != 0.0){
-        if(count != 1)
-            value = val / count;
-        else
-            value = val;
+    if (count != 0.0)
+    {
+        // if (count != 1)
+        //     value = val / count;
+        // else
+        value = val;
         //cout << value << "\t";
         ptr[0] = (1 - value) * 255;
         ptr[1] = value * 255;
