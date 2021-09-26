@@ -360,54 +360,67 @@ int main(int argc, char **argv)
                     if (rw > 1 - diff_width && rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                        buffer_count_resize[new_pos] += buffer_count[pos];
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         }
                         if (new_pos + width <= width * height)
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         }
-                        if (new_width + 1 <= width )
+                        if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                         }
                     }
                     else if (rw <= 1 - diff_width && rh <= 1 - diff_height)
                     {
                         buffer_resize[new_pos] += rw * rh * buffer[pos];
+                        buffer_count_resize[new_pos] += buffer_count[pos];
                     }
                     else if (rw > 1 - diff_width && rh <= 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * rh * buffer[pos];
-                        if (new_width + 1 <= width )
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * rh * buffer[pos];
+                            buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         }
                     }
                     else if (rw <= 1 - diff_width && rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_height) * rw * buffer[pos];
+                        buffer_count_resize[new_pos] += buffer_count[pos];
                         if (new_pos + width <= width * height)
                         {
                             buffer_resize[new_pos + (int)width] += (rh - 1 + diff_height) * rw * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         }
                     }
                 }
                 else if (rw >= 1 && rh >= 1)
                 {
                     buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
-                    if (new_width + 1 <= width )
+                    buffer_count_resize[new_pos] += buffer_count[pos];
+                    if (new_width + 1 <= width && diff_width != 0)
                     {
                         buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * buffer[pos];
+                        buffer_count_resize[new_pos + 1] += buffer_count[pos];
                     }
-                    if (new_pos + width <= width * height)
+                    if (new_pos + width <= width * height && diff_height != 0)
                     {
                         buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * buffer[pos];
+                        buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                     }
-                    if (new_width + 1 <= width)
+                    if (new_width + 1 <= width && diff_height != 0 && diff_width != 0)
                     {
                         buffer_resize[new_pos + (int)width + 1] += diff_width * diff_height * buffer[pos];
+                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                     }
                 }
                 else if (rw >= 1 && rh < 1)
@@ -415,25 +428,31 @@ int main(int argc, char **argv)
                     if (rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
-                        if (new_width + 1 <= width)
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        if (new_width + 1 <= width && diff_width != 0)
                         {
                             buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         }
-                        if (new_pos + width <= width * height)
+                        if (new_pos + width <= width * height )
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         }
-                        if (new_width + 1 <= width)
+                        if (new_width + 1 <= width && diff_width != 0)
                         {
                             buffer_resize[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                         }
                     }
                     else
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * rh * buffer[pos];
-                        if (new_pos + 1 <= width * height)
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        if (new_pos + 1 <= width * height && diff_width != 0)
                         {
                             buffer_resize[new_pos + 1] += diff_width * rh * buffer[pos];
+                            buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         }
                     }
                 }
@@ -442,25 +461,31 @@ int main(int argc, char **argv)
                     if (rw > 1 - diff_width)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                        buffer_count_resize[new_pos] += buffer_count[pos];
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * buffer[pos];
+                            buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         }
-                        if (new_pos + width <= width * height)
+                        if (new_pos + width <= width * height && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         }
-                        if (new_width + 1 <= width)
+                        if (new_width + 1 <= width && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                         }
                     }
                     else
                     {
                         buffer_resize[new_pos] += rw * (1 - diff_height) * buffer[pos];
-                        if (new_pos + width <= width * height)
+                        buffer_count_resize[new_pos] += buffer_count[pos];
+                        if (new_pos + width <= width * height && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width] += rw * diff_height * buffer[pos];
+                            buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         }
                     }
                 }
@@ -730,7 +755,7 @@ int main(int argc, char **argv)
          << endl;
 #endif
 
-#if 0
+#if 1
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
