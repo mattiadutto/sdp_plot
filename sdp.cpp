@@ -3,7 +3,7 @@
 #define THREAD 0
 #define BOOST 1 // Libreria per la gestione degli argomenti.
 #define RESIZE 1
-
+#define NOT_NECESSARY 0 // Per rimuovere frammenti di codice non necessari
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -248,6 +248,8 @@ int main(int argc, char **argv)
     //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
     printf("BUFFER SIZE: %d\n", width * height);
 #endif
+
+#if NOT_NECESSARY // Non penso che la seguente parte di codice sia necessaria con l'utilizzo del resize.
     // Alloco e inizializzo il buffer
 #if !RESIZE
     float *buffer = (float *)malloc(width * height * sizeof(float));
@@ -290,6 +292,10 @@ int main(int argc, char **argv)
         //cout << x.second->getCoverage() << endl;
     }
 
+#else
+    int pos = -1;
+
+#endif
 #if RESIZE
     float resize_factor_width = (float)width / (MAX_WIDTH + 1);
     float resize_factor_height = (float)height / (MAX_HEIGHT + 1);
@@ -350,13 +356,13 @@ int main(int argc, char **argv)
             {
                 //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
                 new_pos = floor(floor(resize_factor_width * x1) + w + (floor(resize_factor_height * y1) + h) * width);
-                //diff = (float)(resize_factor_width * x1 + w) + (float)((resize_factor_height * y1 + h) * width) - new_pos;
+
                 new_width = new_pos % (int)width;
+                new_height = floor(resize_factor_height * y1 + h);
 
                 diff_width = (resize_factor_width * x1 + w) - new_width;
                 diff_height = (resize_factor_height * y1) - floor(resize_factor_height * y1);
 
-                new_height = floor(resize_factor_height * y1 + h);
                 //cout << new_pos << "\t" << (resize_factor_width * x1) << "\t" << (float)(resize_factor_height * y1 * width) << "\t" << diff << "\t" << rw << "\t\t" << (ceil(resize_factor_width) - resize_factor_width) << "\t\t";
                 //cout << diff << "\t\t" << pos << "\t" << x1 << "\t" << y1 << "\t" << new_pos << "\t" << new_width << "\t" << round(new_pos / width) << "\t";
                 if (rw < 1 && rh < 1)
@@ -364,7 +370,6 @@ int main(int argc, char **argv)
                     if (rw > 1 - diff_width && rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
@@ -373,7 +378,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
-                            //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                             else
@@ -382,7 +386,6 @@ int main(int argc, char **argv)
                         if (new_pos + width <= width * height)
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
-                            //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                             else
@@ -391,7 +394,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * coverage;
-                            //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * (rh - 1 + diff_height)));
                             else
@@ -401,7 +403,6 @@ int main(int argc, char **argv)
                     else if (rw <= 1 - diff_width && rh <= 1 - diff_height)
                     {
                         buffer_resize[new_pos] += rw * rh * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, rw * rh));
                         else
@@ -410,7 +411,6 @@ int main(int argc, char **argv)
                     else if (rw > 1 - diff_width && rh <= 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
-                        // buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                         else
@@ -418,7 +418,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * rh * coverage;
-                            //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * rh));
                             else
@@ -428,7 +427,6 @@ int main(int argc, char **argv)
                     else if (rw <= 1 - diff_width && rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_height) * rw * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_height) * rw));
                         else
@@ -436,7 +434,6 @@ int main(int argc, char **argv)
                         if (new_pos + width <= width * height)
                         {
                             buffer_resize[new_pos + (int)width] += (rh - 1 + diff_height) * rw * coverage;
-                            //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, (rh - 1 + diff_height) * rw));
                             else
@@ -447,7 +444,6 @@ int main(int argc, char **argv)
                 else if (rw >= 1 && rh >= 1)
                 {
                     buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
-                    //buffer_count_resize[new_pos] += buffer_count[pos];
                     if (pos_point.find(new_pos) == pos_point.end())
                         pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                     else
@@ -455,7 +451,6 @@ int main(int argc, char **argv)
                     if (new_width + 1 <= width && diff_width != 0)
                     {
                         buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
-                        //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         if (pos_point.find(new_pos + 1) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                         else
@@ -464,7 +459,6 @@ int main(int argc, char **argv)
                     if (new_pos + width <= width * height && diff_height != 0)
                     {
                         buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
-                        //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         if (pos_point.find(new_pos + (int)width) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                         else
@@ -473,7 +467,6 @@ int main(int argc, char **argv)
                     if (new_width + 1 <= width && diff_height != 0 && diff_width != 0)
                     {
                         buffer_resize[new_pos + (int)width + 1] += diff_width * diff_height * coverage;
-                        //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                         if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * diff_height));
                         else
@@ -485,7 +478,6 @@ int main(int argc, char **argv)
                     if (rh > 1 - diff_height)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
@@ -493,7 +485,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width && diff_width != 0)
                         {
                             buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
-                            // buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                             else
@@ -502,7 +493,6 @@ int main(int argc, char **argv)
                         if (new_pos + width <= width * height)
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
-                            //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                             else
@@ -511,7 +501,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width && diff_width != 0)
                         {
                             buffer_resize[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * coverage;
-                            //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * (rh - 1 + diff_height)));
                             else
@@ -521,7 +510,6 @@ int main(int argc, char **argv)
                     else
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                         else
@@ -529,7 +517,6 @@ int main(int argc, char **argv)
                         if (new_pos + 1 <= width * height && diff_width != 0)
                         {
                             buffer_resize[new_pos + 1] += diff_width * rh * coverage;
-                            //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * rh));
                             else
@@ -542,7 +529,6 @@ int main(int argc, char **argv)
                     if (rw > 1 - diff_width)
                     {
                         buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
@@ -550,7 +536,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width)
                         {
                             buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
-                            //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                             else
@@ -559,7 +544,6 @@ int main(int argc, char **argv)
                         if (new_pos + width <= width * height && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
-                            //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                             else
@@ -568,7 +552,6 @@ int main(int argc, char **argv)
                         if (new_width + 1 <= width && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * coverage;
-                            //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * diff_height));
                             else
@@ -578,7 +561,6 @@ int main(int argc, char **argv)
                     else
                     {
                         buffer_resize[new_pos] += rw * (1 - diff_height) * coverage;
-                        //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, rw * (1 - diff_height)));
                         else
@@ -586,7 +568,6 @@ int main(int argc, char **argv)
                         if (new_pos + width <= width * height && diff_height != 0)
                         {
                             buffer_resize[new_pos + (int)width] += rw * diff_height * coverage;
-                            //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, rw * diff_height));
                             else
@@ -594,236 +575,6 @@ int main(int argc, char **argv)
                         }
                     }
                 }
-                /*
-                if (new_pos <= width * height && (prev < new_width || prev == -1)) // per evitare che vada a sporcare la prima fila sia verticale sia orizzontale.
-                {
-                    if (rw >= 1 && rh >= 1)
-                    {
-                        float tmp_pos = buffer[pos];
-                        float tmp_count = buffer_count[pos];
-                        if (new_width != ((resize_factor_width * x1) + w))
-                        {
-                            buffer_resize[new_pos] += buffer[pos] * (1 - diff_width);
-                            buffer_count_resize[new_pos] += buffer_count[pos]; // * (1-diff_width);
-                            if (new_width + 1 <= width)
-                            {
-                                buffer_resize[new_pos + 1] += buffer[pos] * diff_width;
-                                buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
-                            }
-
-                            if (new_height != (resize_factor_height * y1) + h)
-                            {
-                                // Siamo nel caso in cui il pixel va diviso su 4 pixel
-                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height);
-                                buffer_count_resize[new_pos] += buffer_count[pos];
-                                if (new_width + 1 <= width)
-                                {
-                                    buffer_resize[new_pos + 1] += buffer[pos] * (1 - diff_height);
-                                    buffer_count_resize[new_pos + 1] += buffer_count[pos];
-                                }
-                                if (new_pos + (int)width <= width * height)
-                                {
-                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
-                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (1 - diff_width) * diff_height;
-                                    if (new_pos + (int)width + 1 <= width * height)
-                                    {
-                                        buffer_resize[new_pos + (int)width + 1] += buffer[pos] * diff_width * diff_height;
-                                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
-                                    }
-                                }
-                            }
-                        }
-                        else if (new_height != (resize_factor_height * y1) + h)
-                        {
-                            // Siamo divisi in verticale
-                            buffer_resize[new_pos] += buffer[pos] * (1 - diff_height);
-                            buffer_count_resize[new_pos] += buffer_count[pos];
-
-                            if (new_pos + (int)width <= width * height)
-                            {
-                                buffer_resize[new_pos + (int)width] += buffer[pos] * diff_height;
-                                buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
-                            }
-                        }
-                        else
-                        {
-                            buffer_resize[new_pos] += buffer[pos];
-                            buffer_count_resize[new_pos] += buffer_count[pos];
-                        }
-                    }
-                    else if (rw < 1 && rh >= 1)
-                    {
-                        if (resize_factor_width < 1 || resize_factor_height < 1)
-                        {
-                            buffer_resize[new_pos] += buffer[pos];
-                            buffer_count_resize[new_pos] += buffer_count[pos];
-                        }
-                        else if (new_width != ((resize_factor_width * x1) + w))
-                        {
-                            if (diff_width <= rw)
-                            {
-                                // aggiunto caso altezza
-                                if (new_height != (resize_factor_height * y1) + h)
-                                {
-                                    buffer_resize[new_pos] += buffer[pos] * rw * (1 - diff_height);
-                                    buffer_count_resize[new_pos] += buffer_count[pos] * rw;
-                                    if (new_pos + width <= width * height)
-                                    {
-                                        buffer_resize[new_pos + (int)width] += buffer[pos] * rw * diff_height;
-                                        buffer_count_resize[new_pos + (int)width] += buffer_count[pos] * rw;
-                                    }
-                                }
-                                else
-                                {
-                                    buffer_resize[new_pos] += buffer[pos] * rw;
-                                    buffer_count_resize[new_pos] += buffer_count[pos] * rw;
-                                }
-                            }
-                            else
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_width) * rw;
-                                if (new_width + 1 <= width)
-                                    buffer_resize[new_pos + 1] += buffer[pos] * diff_width * rw;
-
-                                buffer_count_resize[new_pos] += buffer_count[pos];     // * 0.5;
-                                buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * (0.5 - rw);
-                                // aggiunto caso altezza
-                                if (new_height != (resize_factor_height * y1) + h)
-                                {
-                                    buffer_resize[new_pos] *= (1 - diff_height);
-                                    if (new_width + 1 <= width)
-                                        buffer_resize[new_pos + 1] *= (1 - diff_height);
-
-                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
-                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (1 - diff_width) * diff_height * rw;
-                                    if (new_pos + (int)width + 1 <= width * height)
-                                    {
-                                        buffer_resize[new_pos + (int)width + 1] += buffer[pos] * diff_width * diff_height * rw;
-                                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
-                                    }
-                                }
-                                
-                            }
-                        }
-                        else
-                        {
-                            if (new_pos <= width * height)
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * rw;
-                                buffer_count_resize[new_pos] += buffer_count[pos]; // *rw;
-                            }
-                        }
-                    }
-                    else if (rh < 1 && rw >= 1)
-                    {
-                        if (resize_factor_width < 1 || resize_factor_height < 1)
-                        {
-                            buffer_resize[new_pos] += buffer[pos];
-                            buffer_count_resize[new_pos] += buffer_count[pos];
-                        }
-                        else if (new_height != (resize_factor_height * y1) + h)
-                        {
-                            if (diff_height <= rh)
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos] * rh;
-                                // Aggiunto caso larghezza
-                                if (diff_width != 0)
-                                {
-                                    buffer_resize[new_pos] *= (1 - diff_width);
-                                    if (new_width + 1 <= width)
-                                    {
-                                        buffer_resize[new_pos + 1] += buffer[pos] * diff_width * rh;
-                                        buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height) * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos]; // * 0.5;
-                                if (new_pos + (int)width <= width * height)
-                                {
-                                    buffer_resize[new_pos + (int)width] += buffer[pos] * diff_height * rh;
-                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos]; // * (0.5 - rh);
-                                }
-                                // Aggiunto caso larghezza
-                                if (diff_width != 0)
-                                {
-                                    buffer_resize[new_pos] *= (1 - diff_width);
-                                    if (new_width + 1 <= width)
-                                    {
-                                        buffer_resize[new_pos + 1] += buffer[pos] * (1 - diff_height) * diff_width * rh;
-                                        buffer_count_resize[new_pos] += buffer_count[pos]; // * 0.5;
-                                    }
-
-                                    if (new_pos + (int)width <= width * height)
-                                        buffer_resize[new_pos + (int)width] *= diff_width;
-
-                                    if (new_pos + width + 1 <= width * height)
-                                    {
-                                        buffer_resize[new_pos + (int)width + 1] += buffer[pos] * diff_width * (diff_height)*rh;
-                                        buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos]; // * (0.5 - rh);
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            if (new_pos <= width * height) // per evitare che vada oltre
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos];
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (resize_factor_width < 1 || resize_factor_height < 1)
-                            buffer_resize[new_pos] += buffer[pos];
-                        else
-                        {
-                            // Aggiunti casi altezza e larghezza
-                            if (diff_width > rw)
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_width) * rw * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos]; // * (1-diff_width);
-                                if (new_width + 1 <= width)
-                                {
-                                    buffer_resize[new_pos + 1] += buffer[pos] * (diff_width) * rw * rh;
-                                    buffer_count_resize[new_pos + 1] += buffer_count[pos]; // * diff_width;
-                                }
-                            }
-                            if (diff_height > rh)
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * (1 - diff_height) * rw * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos];
-
-                                if (new_pos + (int)width <= width * height)
-                                {
-                                    buffer_resize[new_pos + (int)width] += buffer[pos] * (rh-(1-diff_height)) * rw;
-                                    buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
-                                }
-                                if (diff_width > rw)
-                                {
-                                    if (new_width + 1 <= width)
-                                        buffer_resize[new_pos + 1] *= (1 - diff_height);
-                                    if (new_pos + (int)width <= width * height)
-                                        buffer_resize[new_pos + (int)width] *= (1 - diff_width);
-                                    if (new_pos + (int)width + 1 <= width * height)
-                                        buffer_resize[new_pos + (int)width + 1] *= diff_width * (rh - (1-diff_height)) * rw;
-                                }
-                            }
-                            if (diff_width <= rw && diff_height <= rh)
-                            {
-                                buffer_resize[new_pos] += buffer[pos] * rw * rh;
-                                buffer_count_resize[new_pos] += buffer_count[pos];
-                            }
-                        }
-                    }
-                    prev = new_width;
-                }
-                */
                 // cout << buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] << "P" << buffer[pos] << "\t" << buffer_count[pos] << endl;
             }
         }
@@ -876,10 +627,10 @@ int main(int argc, char **argv)
         cout << endl;
     }
 #endif
-
+#if NOT_NECESSARY
     free(buffer);
     free(buffer_count);
-
+#endif
     cout << "Creazione immagine"
          << "\n";
     char tmp[MAX_STR + 1];
@@ -926,10 +677,10 @@ inline void setRGB(png_byte *ptr, float val, float count)
     float value;
     if (count != 0.0)
     {
-        if(count > 1)
-        value = val / count;
+        if (count > 1)
+            value = val / count;
         else
-        value = val * count;
+            value = val * count;
         ptr[0] = (1 - value) * 255;
         ptr[1] = value * 255;
         ptr[2] = 0;
