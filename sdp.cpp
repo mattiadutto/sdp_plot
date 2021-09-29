@@ -286,7 +286,7 @@ int main(int argc, char **argv)
             buffer[pos] += x.second->getCoverage();
         buffer_count[pos]++;
 
-        //cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
+        cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
         //cout << x.second->getCoverage() << endl;
     }
 
@@ -340,6 +340,7 @@ int main(int argc, char **argv)
         rh = resize_factor_height;
         x1 = x.second->getX();
         y1 = x.second->getY();
+        coverage = x.second->getCoverage();
 
         for (int h = 0; h < ceil(resize_factor_height); h++, rh--)
         {
@@ -362,177 +363,177 @@ int main(int argc, char **argv)
                 {
                     if (rw > 1 - diff_width && rh > 1 - diff_height)
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * (1 - diff_height)));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * (1 - diff_height);
+                            pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
 
                         if (new_width + 1 <= width)
                         {
-                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * buffer[pos];
+                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
                             //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * (rw - 1 + diff_width) * (1 - diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                             else
-                                pos_point.find(new_pos + 1)->second += buffer_count[pos] * (rw - 1 + diff_width) * (1 - diff_height);
+                                pos_point.find(new_pos + 1)->second += (rw - 1 + diff_width) * (1 - diff_height);
                         }
                         if (new_pos + width <= width * height)
                         {
-                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
                             //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * (1 - diff_width) * (rh - 1 + diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                             else
-                                pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * (1 - diff_width) * (rh - 1 + diff_height);
+                                pos_point.find(new_pos + (int)width)->second += (1 - diff_width) * (rh - 1 + diff_height);
                         }
                         if (new_width + 1 <= width)
                         {
-                            buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * coverage;
                             //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, buffer_count[pos] * (rw - 1 + diff_width) * (rh - 1 + diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * (rh - 1 + diff_height)));
                             else
-                                pos_point.find(new_pos + (int)width + 1)->second += buffer_count[pos] * (rw - 1 + diff_width) * (rh - 1 + diff_height);
+                                pos_point.find(new_pos + (int)width + 1)->second += (rw - 1 + diff_width) * (rh - 1 + diff_height);
                         }
                     }
                     else if (rw <= 1 - diff_width && rh <= 1 - diff_height)
                     {
-                        buffer_resize[new_pos] += rw * rh * buffer[pos];
+                        buffer_resize[new_pos] += rw * rh * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * rw * rh));
+                            pos_point.insert(std::pair<int, float>(new_pos, rw * rh));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * rw * rh;
+                            pos_point.find(new_pos)->second += rw * rh;
                     }
                     else if (rw > 1 - diff_width && rh <= 1 - diff_height)
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * rh * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
                         // buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * rh));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * rh;
+                            pos_point.find(new_pos)->second += (1 - diff_width) * rh;
                         if (new_width + 1 <= width)
                         {
-                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * rh * buffer[pos];
+                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * rh * coverage;
                             //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * (rw - 1 + diff_width) * rh));
+                                pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * rh));
                             else
-                                pos_point.find(new_pos + 1)->second += buffer_count[pos] * (rw - 1 + diff_width) * rh;
+                                pos_point.find(new_pos + 1)->second += (rw - 1 + diff_width) * rh;
                         }
                     }
                     else if (rw <= 1 - diff_width && rh > 1 - diff_height)
                     {
-                        buffer_resize[new_pos] += (1 - diff_height) * rw * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_height) * rw * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_height) * rw));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_height) * rw));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_height) * rw;
+                            pos_point.find(new_pos)->second += (1 - diff_height) * rw;
                         if (new_pos + width <= width * height)
                         {
-                            buffer_resize[new_pos + (int)width] += (rh - 1 + diff_height) * rw * buffer[pos];
+                            buffer_resize[new_pos + (int)width] += (rh - 1 + diff_height) * rw * coverage;
                             //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * (rh - 1 + diff_height) * rw));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, (rh - 1 + diff_height) * rw));
                             else
-                                pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * (rh - 1 + diff_height) * rw;
+                                pos_point.find(new_pos + (int)width)->second += (rh - 1 + diff_height) * rw;
                         }
                     }
                 }
                 else if (rw >= 1 && rh >= 1)
                 {
-                    buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                    buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                     //buffer_count_resize[new_pos] += buffer_count[pos];
                     if (pos_point.find(new_pos) == pos_point.end())
-                        pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * (1 - diff_height)));
+                        pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                     else
-                        pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * (1 - diff_height);
+                        pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                     if (new_width + 1 <= width && diff_width != 0)
                     {
-                        buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * buffer[pos];
+                        buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
                         //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                         if (pos_point.find(new_pos + 1) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * diff_width * (1 - diff_height)));
+                            pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                         else
-                            pos_point.find(new_pos + 1)->second += buffer_count[pos] * diff_width * (1 - diff_height);
+                            pos_point.find(new_pos + 1)->second += diff_width * (1 - diff_height);
                     }
                     if (new_pos + width <= width * height && diff_height != 0)
                     {
-                        buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * buffer[pos];
+                        buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
                         //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                         if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * (1 - diff_width) * diff_height));
+                            pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                         else
-                            pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * (1 - diff_width) * diff_height;
+                            pos_point.find(new_pos + (int)width)->second += (1 - diff_width) * diff_height;
                     }
                     if (new_width + 1 <= width && diff_height != 0 && diff_width != 0)
                     {
-                        buffer_resize[new_pos + (int)width + 1] += diff_width * diff_height * buffer[pos];
+                        buffer_resize[new_pos + (int)width + 1] += diff_width * diff_height * coverage;
                         //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                         if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, buffer_count[pos] * diff_width * diff_height));
+                            pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * diff_height));
                         else
-                            pos_point.find(new_pos + (int)width + 1)->second += buffer_count[pos] * diff_width * diff_height;
+                            pos_point.find(new_pos + (int)width + 1)->second += diff_width * diff_height;
                     }
                 }
                 else if (rw >= 1 && rh < 1)
                 {
                     if (rh > 1 - diff_height)
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * (1 - diff_height)));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * (1 - diff_height);
+                            pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                         if (new_width + 1 <= width && diff_width != 0)
                         {
-                            buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * buffer[pos];
+                            buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
                             // buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * diff_width * (1 - diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                             else
-                                pos_point.find(new_pos + 1)->second += buffer_count[pos] * diff_width * (1 - diff_height);
+                                pos_point.find(new_pos + 1)->second += diff_width * (1 - diff_height);
                         }
                         if (new_pos + width <= width * height)
                         {
-                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
                             //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * (1 - diff_width) * (rh - 1 + diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                             else
-                                pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * (1 - diff_width) * (rh - 1 + diff_height);
+                                pos_point.find(new_pos + (int)width)->second += (1 - diff_width) * (rh - 1 + diff_height);
                         }
                         if (new_width + 1 <= width && diff_width != 0)
                         {
-                            buffer_resize[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * buffer[pos];
+                            buffer_resize[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * coverage;
                             //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, buffer_count[pos] * diff_width * (rh - 1 + diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * (rh - 1 + diff_height)));
                             else
-                                pos_point.find(new_pos + (int)width + 1)->second += buffer_count[pos] * diff_width * (rh - 1 + diff_height);
+                                pos_point.find(new_pos + (int)width + 1)->second += diff_width * (rh - 1 + diff_height);
                         }
                     }
                     else
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * rh * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * rh));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * rh;
+                            pos_point.find(new_pos)->second += (1 - diff_width) * rh;
                         if (new_pos + 1 <= width * height && diff_width != 0)
                         {
-                            buffer_resize[new_pos + 1] += diff_width * rh * buffer[pos];
+                            buffer_resize[new_pos + 1] += diff_width * rh * coverage;
                             //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * diff_width * rh));
+                                pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * rh));
                             else
-                                pos_point.find(new_pos + 1)->second += buffer_count[pos] * diff_width * rh;
+                                pos_point.find(new_pos + 1)->second += diff_width * rh;
                         }
                     }
                 }
@@ -540,56 +541,56 @@ int main(int argc, char **argv)
                 {
                     if (rw > 1 - diff_width)
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * buffer[pos];
+                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * (1 - diff_width) * (1 - diff_height)));
+                            pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * (1 - diff_width) * (1 - diff_height);
+                            pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                         if (new_width + 1 <= width)
                         {
-                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * buffer[pos];
+                            buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
                             //buffer_count_resize[new_pos + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + 1, buffer_count[pos] * (rw - 1 + diff_width) * (1 - diff_height)));
+                                pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                             else
-                                pos_point.find(new_pos + 1)->second += buffer_count[pos] * (rw - 1 + diff_width) * (1 - diff_height);
+                                pos_point.find(new_pos + 1)->second += (rw - 1 + diff_width) * (1 - diff_height);
                         }
                         if (new_pos + width <= width * height && diff_height != 0)
                         {
-                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * buffer[pos];
+                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
                             //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * (1 - diff_width) * diff_height));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                             else
-                                pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * (1 - diff_width) * diff_height;
+                                pos_point.find(new_pos + (int)width)->second += (1 - diff_width) * diff_height;
                         }
                         if (new_width + 1 <= width && diff_height != 0)
                         {
-                            buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * buffer[pos];
+                            buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * coverage;
                             //buffer_count_resize[new_pos + (int)width + 1] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, buffer_count[pos] * (rw - 1 + diff_width) * diff_height));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * diff_height));
                             else
-                                pos_point.find(new_pos + (int)width + 1)->second += buffer_count[pos] * (rw - 1 + diff_width) * diff_height;
+                                pos_point.find(new_pos + (int)width + 1)->second += (rw - 1 + diff_width) * diff_height;
                         }
                     }
                     else
                     {
-                        buffer_resize[new_pos] += rw * (1 - diff_height) * buffer[pos];
+                        buffer_resize[new_pos] += rw * (1 - diff_height) * coverage;
                         //buffer_count_resize[new_pos] += buffer_count[pos];
                         if (pos_point.find(new_pos) == pos_point.end())
-                            pos_point.insert(std::pair<int, float>(new_pos, buffer_count[pos] * rw * (1 - diff_height)));
+                            pos_point.insert(std::pair<int, float>(new_pos, rw * (1 - diff_height)));
                         else
-                            pos_point.find(new_pos)->second += buffer_count[pos] * rw * (1 - diff_height);
+                            pos_point.find(new_pos)->second += rw * (1 - diff_height);
                         if (new_pos + width <= width * height && diff_height != 0)
                         {
-                            buffer_resize[new_pos + (int)width] += rw * diff_height * buffer[pos];
+                            buffer_resize[new_pos + (int)width] += rw * diff_height * coverage;
                             //buffer_count_resize[new_pos + (int)width] += buffer_count[pos];
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
-                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, buffer_count[pos] * rw * diff_height));
+                                pos_point.insert(std::pair<int, float>(new_pos + (int)width, rw * diff_height));
                             else
-                                pos_point.find(new_pos + (int)width)->second += buffer_count[pos] * rw * diff_height;
+                                pos_point.find(new_pos + (int)width)->second += rw * diff_height;
                         }
                     }
                 }
@@ -827,7 +828,10 @@ int main(int argc, char **argv)
             }
         }
         for (auto &y : pos_point)
+        {
             buffer_count_resize[y.first] += y.second;
+            cout << y.first << "\t" << y.second << endl;
+        }
 #if 0
         cout.precision(2);
         for (int i = 0; i < height; i++)
@@ -922,15 +926,15 @@ inline void setRGB(png_byte *ptr, float val, float count)
     float value;
     if (count != 0.0)
     {
-        if (count != 1)
-            value = val / count;
+        if(count > 1)
+        value = val / count;
         else
-            value = val;
+        value = val * count;
         ptr[0] = (1 - value) * 255;
         ptr[1] = value * 255;
         ptr[2] = 0;
 
-        //printf("%f\t%f\t%d %d %d\n", val, count, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
+        printf("%f\t%d %d %d\n", value, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
     }
     else
     {
