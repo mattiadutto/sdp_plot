@@ -1,9 +1,7 @@
-#define PRINT 0 // Per debug, stampa alcuni dati extra
-#define TIME 1  // Per calcolo tempo esecuzione
-#define THREAD 0
-#define BOOST 1 // Libreria per la gestione degli argomenti.
+#define PRINT 0 // For debug use, it print some extra information.
+#define TIME 0  // For compute the elapsed time.
+#define BOOST 1 // For use boost program options.
 #define RESIZE 1
-#define NOT_NECESSARY 0 // Per rimuovere frammenti di codice non necessari
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,24 +20,20 @@ using namespace std;
 #if TIME
 #include <chrono>
 #endif
-#if THREAD
-#define N_THREADS 2
-#include <thread>
-#endif
 #if BOOST
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 #endif
 #include "Point.h"
 
-#define MAX_STR 50 // Suppongo che i file non abbiano un nome superiore ai 50 caratteri.
+#define MAX_STR 50 // I suppose that the max_lenght of the file name with extension is less than 51 characters.
 #define TITLE "Title"
 
-// Questi ci serviranno per riscalare l'immagine.
+// I need this for the resize part.
 float MAX_WIDTH = 0;
 float MAX_HEIGHT = 0;
 
-// writeImage() and setRGB() da http://www.labbookpages.co.uk/software/imgProc/libPNG.html
+// writeImage() and setRGB() from http://www.labbookpages.co.uk/software/imgProc/libPNG.html
 inline void setRGB(png_byte *ptr, float val, unsigned char count);
 int writeImage(char *filename, int width, int height, float *buffer, float *buffer_count, char *title);
 void finalise(FILE *fp, png_infop info_ptr, png_structp png_ptr);
@@ -171,9 +165,7 @@ int main(int argc, char **argv)
         width = atoi(strtok(NULL, "x"));
     }
 #endif
-    //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string,   Point>));
-
-    // Leggo il file dei segnali
+    // Reading file of positioning.
     cout << "Lettura file segnali"
          << "\n";
     file_pointer.open(cell_file);
@@ -182,7 +174,7 @@ int main(int argc, char **argv)
         while (!file_pointer.eof())
         {
             file_pointer >> signal_name >> y >> x;
-            // servira' per quando avremo a che fare con il ridimensionamento
+            // I did this following the Python tool.
             signal_name = "testbench/top/" + signal_name;
             if (x > MAX_WIDTH)
                 MAX_WIDTH = x;
@@ -207,7 +199,7 @@ int main(int argc, char **argv)
     file_pointer.close();
     cout << "Fine lettura file segnali"
          << "\n";
-    // Leggo il file delle coperture
+    // Read coverage file.
     cout << "Lettura file coperture"
          << "\n";
     file_pointer.open(coverage_file);
@@ -232,10 +224,9 @@ int main(int argc, char **argv)
          << chrono::duration_cast<chrono::seconds>(end_coverage_file - end_structure_file).count()
          << " sec";
 #endif
-    //printf("# OF POINTS: %lld", (long long int)map_points.size());
-
-    // Controllo che la lettura sia andata a buon fine, usato solo per i primi test.
+    
 #if PRINT
+    // Check for see if the reading went well
     for (auto &x : map_points)
     {
         cout << x.first << "\t";
@@ -245,69 +236,23 @@ int main(int argc, char **argv)
 
 #if PRINT
     printf("WIDTH x HEIGHT: %d x %d\n", width, height);
-    //printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
+    printf("SIZE: %f x %f\n", MAX_WIDTH, MAX_HEIGHT);
     printf("BUFFER SIZE: %d\n", width * height);
 #endif
 
-#if NOT_NECESSARY // Non penso che la seguente parte di codice sia necessaria con l'utilizzo del resize.
-    // Alloco e inizializzo il buffer
-#if !RESIZE
-    float *buffer = (float *)malloc(width * height * sizeof(float));
-    unsigned char *buffer_count = (unsigned char *)malloc(width * height * sizeof(unsigned char));
-#else
-    float *buffer = (float *)malloc((MAX_WIDTH + 1) * (MAX_HEIGHT + 1) * sizeof(float));
-    unsigned char *buffer_count = (unsigned char *)malloc((MAX_WIDTH + 1) * (MAX_HEIGHT + 1) * sizeof(unsigned char));
-#endif
     int pos = -1;
 
-    if (buffer == NULL || buffer_count == NULL)
-    {
-        fprintf(stderr, "Could not create image buffer\n");
-        return -2;
-    }
-#if !RESIZE
-    for (int i = 0; i < width * height; i++)
-#else
-    for (int i = 0; i < (MAX_WIDTH + 1) * (MAX_HEIGHT + 1); i++)
-#endif
-    {
-        buffer[i] = -1.0;
-        buffer_count[i] = 0;
-    }
 
-    for (auto &x : map_points)
-    {
-#if !RESIZE
-        pos = x.second->getPosition(width);
-#else
-        pos = x.second->getPosition(MAX_WIDTH + 1);
-#endif
-        if (buffer[pos] == -1)
-            buffer[pos] = x.second->getCoverage();
-        else
-            buffer[pos] += x.second->getCoverage();
-        buffer_count[pos]++;
-
-        cout << buffer[pos] << "\t" << buffer_count[pos] << endl;
-        //cout << x.second->getCoverage() << endl;
-    }
-
-#else
-    int pos = -1;
-
-#endif
 #if RESIZE
     float resize_factor_width = (float)width / (MAX_WIDTH + 1);
     float resize_factor_height = (float)height / (MAX_HEIGHT + 1);
 
-    // Per limitare le modifiche se il ridimensionamento è sotto il 20% non viene effettuato
-    //if (resize_factor_width - 1 > 0 && resize_factor_width - 1 < 0.2)
+    // For limit the program, I put a condition on the resize factors.
     if (resize_factor_width - 1 < 0.2 || resize_factor_width < 1)
     {
         resize_factor_width = 1;
         width = MAX_WIDTH + 1;
     }
-    //if (resize_factor_height - 1 > 0 && resize_factor_height - 1 < 0.2)
     if (resize_factor_height - 1 < 0.2 || resize_factor_height < 1)
     {
         resize_factor_height = 1;
@@ -318,19 +263,17 @@ int main(int argc, char **argv)
     cout << (MAX_WIDTH + 1) << "\t" << (MAX_HEIGHT + 1) << endl;
     cout << "Resize factor: "
          << "\t" << resize_factor_width << "\t" << resize_factor_height << endl;
-    cout << "Rounded: "
-         << "\t" << ceil(resize_factor_width) << "\t" << ceil(resize_factor_height) << endl;
-
+   
     cout << width << "\t" << height << endl;
 
-    // Dichiaro vettori di supporto per il resize
-    float *buffer_resize = (float *)malloc(width * height * sizeof(float));
-    float *buffer_count_resize = (float *)malloc(width * height * sizeof(float));
+    // This vector are at the base of all the program
+    float *buffer = (float *)malloc(width * height * sizeof(float));
+    float *buffer_count = (float *)malloc(width * height * sizeof(float));
 
     for (int i = 0; i < width * height; i++)
     {
-        buffer_resize[i] = 0.0;
-        buffer_count_resize[i] = 0;
+        buffer[i] = 0.0;
+        buffer_count[i] = 0;
     }
 
     float rw, rh, x1, y1;
@@ -344,11 +287,11 @@ int main(int argc, char **argv)
         {
             pos = x.second->getPosition(width);
 
-            if (buffer_resize[pos] == -1)
-                buffer_resize[pos] = x.second->getCoverage();
+            if (buffer[pos] == -1)
+                buffer[pos] = x.second->getCoverage();
             else
-                buffer_resize[pos] += x.second->getCoverage();
-            buffer_count_resize[pos]++;
+                buffer[pos] += x.second->getCoverage();
+            buffer_count[pos]++;
         }
     }
     else
@@ -369,7 +312,6 @@ int main(int argc, char **argv)
                 prev = -1;
                 for (int w = 0; w < ceil(resize_factor_width); w++, rw--)
                 {
-                    //((reY x Y + h) *reX LARGHEZZA ) + (reX * X +w)
                     new_pos = floor(floor(resize_factor_width * x1) + w + (floor(resize_factor_height * y1) + h) * width);
 
                     new_width = new_pos % (int)width;
@@ -378,13 +320,11 @@ int main(int argc, char **argv)
                     diff_width = (resize_factor_width * x1 + w) - new_width;
                     diff_height = (resize_factor_height * y1) - floor(resize_factor_height * y1);
 
-                    //cout << new_pos << "\t" << (resize_factor_width * x1) << "\t" << (float)(resize_factor_height * y1 * width) << "\t" << diff << "\t" << rw << "\t\t" << (ceil(resize_factor_width) - resize_factor_width) << "\t\t";
-                    //cout << diff << "\t\t" << pos << "\t" << x1 << "\t" << y1 << "\t" << new_pos << "\t" << new_width << "\t" << round(new_pos / width) << "\t";
                     if (rw < 1 && rh < 1)
                     {
                         if (rw > 1 - diff_width && rh > 1 - diff_height)
                         {
-                            buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
+                            buffer[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                             else
@@ -392,7 +332,7 @@ int main(int argc, char **argv)
 
                             if (new_width + 1 <= width)
                             {
-                                buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
+                                buffer[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
                                 if (pos_point.find(new_pos + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                                 else
@@ -400,7 +340,7 @@ int main(int argc, char **argv)
                             }
                             if (new_pos + width <= width * height)
                             {
-                                buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
+                                buffer[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
                                 if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                                 else
@@ -408,7 +348,7 @@ int main(int argc, char **argv)
                             }
                             if (new_width + 1 <= width)
                             {
-                                buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * coverage;
+                                buffer[new_pos + (int)width + 1] += (rw - 1 + diff_width) * (rh - 1 + diff_height) * coverage;
                                 if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * (rh - 1 + diff_height)));
                                 else
@@ -417,7 +357,7 @@ int main(int argc, char **argv)
                         }
                         else if (rw <= 1 - diff_width && rh <= 1 - diff_height)
                         {
-                            buffer_resize[new_pos] += rw * rh * coverage;
+                            buffer[new_pos] += rw * rh * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, rw * rh));
                             else
@@ -425,14 +365,14 @@ int main(int argc, char **argv)
                         }
                         else if (rw > 1 - diff_width && rh <= 1 - diff_height)
                         {
-                            buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
+                            buffer[new_pos] += (1 - diff_width) * rh * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                             else
                                 pos_point.find(new_pos)->second += (1 - diff_width) * rh;
                             if (new_width + 1 <= width)
                             {
-                                buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * rh * coverage;
+                                buffer[new_pos + 1] += (rw - 1 + diff_width) * rh * coverage;
                                 if (pos_point.find(new_pos + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * rh));
                                 else
@@ -441,14 +381,14 @@ int main(int argc, char **argv)
                         }
                         else if (rw <= 1 - diff_width && rh > 1 - diff_height)
                         {
-                            buffer_resize[new_pos] += (1 - diff_height) * rw * coverage;
+                            buffer[new_pos] += (1 - diff_height) * rw * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_height) * rw));
                             else
                                 pos_point.find(new_pos)->second += (1 - diff_height) * rw;
                             if (new_pos + width <= width * height)
                             {
-                                buffer_resize[new_pos + (int)width] += (rh - 1 + diff_height) * rw * coverage;
+                                buffer[new_pos + (int)width] += (rh - 1 + diff_height) * rw * coverage;
                                 if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width, (rh - 1 + diff_height) * rw));
                                 else
@@ -458,14 +398,14 @@ int main(int argc, char **argv)
                     }
                     else if (rw >= 1 && rh >= 1)
                     {
-                        buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
+                        buffer[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                         if (pos_point.find(new_pos) == pos_point.end())
                             pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                         else
                             pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                         if (new_width + 1 <= width && diff_width != 0)
                         {
-                            buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
+                            buffer[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
                             if (pos_point.find(new_pos + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                             else
@@ -473,7 +413,7 @@ int main(int argc, char **argv)
                         }
                         if (new_pos + width <= width * height && diff_height != 0)
                         {
-                            buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
+                            buffer[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
                             if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                             else
@@ -481,7 +421,7 @@ int main(int argc, char **argv)
                         }
                         if (new_width + 1 <= width && diff_height != 0 && diff_width != 0)
                         {
-                            buffer_resize[new_pos + (int)width + 1] += diff_width * diff_height * coverage;
+                            buffer[new_pos + (int)width + 1] += diff_width * diff_height * coverage;
                             if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * diff_height));
                             else
@@ -492,14 +432,14 @@ int main(int argc, char **argv)
                     {
                         if (rh > 1 - diff_height)
                         {
-                            buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
+                            buffer[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                             else
                                 pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                             if (new_width + 1 <= width && diff_width != 0)
                             {
-                                buffer_resize[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
+                                buffer[new_pos + 1] += diff_width * (1 - diff_height) * coverage;
                                 if (pos_point.find(new_pos + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * (1 - diff_height)));
                                 else
@@ -507,7 +447,7 @@ int main(int argc, char **argv)
                             }
                             if (new_pos + width <= width * height)
                             {
-                                buffer_resize[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
+                                buffer[new_pos + (int)width] += (1 - diff_width) * (rh - 1 + diff_height) * coverage;
                                 if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * (rh - 1 + diff_height)));
                                 else
@@ -515,7 +455,7 @@ int main(int argc, char **argv)
                             }
                             if (new_width + 1 <= width && diff_width != 0)
                             {
-                                buffer_resize[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * coverage;
+                                buffer[new_pos + (int)width + 1] += diff_width * (rh - 1 + diff_height) * coverage;
                                 if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, diff_width * (rh - 1 + diff_height)));
                                 else
@@ -524,14 +464,14 @@ int main(int argc, char **argv)
                         }
                         else
                         {
-                            buffer_resize[new_pos] += (1 - diff_width) * rh * coverage;
+                            buffer[new_pos] += (1 - diff_width) * rh * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * rh));
                             else
                                 pos_point.find(new_pos)->second += (1 - diff_width) * rh;
                             if (new_pos + 1 <= width * height && diff_width != 0)
                             {
-                                buffer_resize[new_pos + 1] += diff_width * rh * coverage;
+                                buffer[new_pos + 1] += diff_width * rh * coverage;
                                 if (pos_point.find(new_pos + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + 1, diff_width * rh));
                                 else
@@ -543,14 +483,14 @@ int main(int argc, char **argv)
                     {
                         if (rw > 1 - diff_width)
                         {
-                            buffer_resize[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
+                            buffer[new_pos] += (1 - diff_width) * (1 - diff_height) * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, (1 - diff_width) * (1 - diff_height)));
                             else
                                 pos_point.find(new_pos)->second += (1 - diff_width) * (1 - diff_height);
                             if (new_width + 1 <= width)
                             {
-                                buffer_resize[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
+                                buffer[new_pos + 1] += (rw - 1 + diff_width) * (1 - diff_height) * coverage;
                                 if (pos_point.find(new_pos + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + 1, (rw - 1 + diff_width) * (1 - diff_height)));
                                 else
@@ -558,7 +498,7 @@ int main(int argc, char **argv)
                             }
                             if (new_pos + width <= width * height && diff_height != 0)
                             {
-                                buffer_resize[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
+                                buffer[new_pos + (int)width] += (1 - diff_width) * diff_height * coverage;
                                 if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width, (1 - diff_width) * diff_height));
                                 else
@@ -566,7 +506,7 @@ int main(int argc, char **argv)
                             }
                             if (new_width + 1 <= width && diff_height != 0)
                             {
-                                buffer_resize[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * coverage;
+                                buffer[new_pos + (int)width + 1] += (rw - 1 + diff_width) * diff_height * coverage;
                                 if (pos_point.find(new_pos + (int)width + 1) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width + 1, (rw - 1 + diff_width) * diff_height));
                                 else
@@ -575,14 +515,14 @@ int main(int argc, char **argv)
                         }
                         else
                         {
-                            buffer_resize[new_pos] += rw * (1 - diff_height) * coverage;
+                            buffer[new_pos] += rw * (1 - diff_height) * coverage;
                             if (pos_point.find(new_pos) == pos_point.end())
                                 pos_point.insert(std::pair<int, float>(new_pos, rw * (1 - diff_height)));
                             else
                                 pos_point.find(new_pos)->second += rw * (1 - diff_height);
                             if (new_pos + width <= width * height && diff_height != 0)
                             {
-                                buffer_resize[new_pos + (int)width] += rw * diff_height * coverage;
+                                buffer[new_pos + (int)width] += rw * diff_height * coverage;
                                 if (pos_point.find(new_pos + (int)width) == pos_point.end())
                                     pos_point.insert(std::pair<int, float>(new_pos + (int)width, rw * diff_height));
                                 else
@@ -590,20 +530,23 @@ int main(int argc, char **argv)
                             }
                         }
                     }
-                    // cout << buffer_resize[new_pos] << "\t" << buffer_count_resize[new_pos] << "P" << buffer[pos] << "\t" << buffer_count[pos] << endl;
+                    #if PRINT
+                    cout << buffer[new_pos] << "\t" << buffer_count[new_pos] << "P" << buffer[pos] << "\t" << buffer_count[pos] << endl;
+                    #endif
                 }
             }
             for (auto &y : pos_point)
-                buffer_count_resize[y.first] += y.second;
+                buffer_count[y.first] += y.second;
 
 #if 0
+        // Print of the values of buffer at each iteration of the for, so for each new point
         cout.precision(2);
         for (int i = 0; i < height; i++)
         {
             for (int j = 0; j < width; j++)
             {
                 pos = i * width + j;
-                cout << buffer_resize[pos] << "\t";
+                cout << buffer[pos] << "\t";
             }
             cout << endl;
         }
@@ -614,13 +557,14 @@ int main(int argc, char **argv)
         }
     }
 #if 0
+// Print of the values of buffer
     cout.precision(2);
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
         {
             pos = i * width + j;
-            cout << buffer_resize[pos] << "\t";
+            cout << buffer[pos] << "\t";
         }
         cout << endl;
     }
@@ -630,32 +574,29 @@ int main(int argc, char **argv)
 #endif
 
 #if 0
+// Print of the values of count of how many points there in a single pixel
     for (int i = 0; i < height; i++)
     {
         for (int j = 0; j < width; j++)
         {
             pos = i * width + j;
-            cout << buffer_count_resize[pos] << "\t";
+            cout << buffer_count[pos] << "\t";
         }
         cout << endl;
     }
 #endif
-#if NOT_NECESSARY
-    free(buffer);
-    free(buffer_count);
-#endif
+
     cout << "Creazione immagine"
          << "\n";
     char tmp[MAX_STR + 1];
 
-    //output_file = "resize_" + output_file;
-
     strcpy(tmp, output_file.c_str());
 
-    int result = writeImage(tmp, width, height, buffer_resize, buffer_count_resize, tmp);
-
-    free(buffer_resize);
-    free(buffer_count_resize);
+    int result = writeImage(tmp, width, height, buffer, buffer_count, tmp);
+    
+    // Free up the memorty used to store the image
+    free(buffer);
+    free(buffer_count);
 
     cout << "Fine"
          << "\n";
@@ -665,7 +606,6 @@ int main(int argc, char **argv)
          << "\n";
     char tmp[MAX_STR + 1];
     strcpy(tmp, output_file.c_str());
-    //int result = writeImage(tmp, MAX_WIDTH + 1, MAX_HEIGHT + 1 ,  buffer, buffer_count, tmp);
     int result = writeImage(tmp, width, height, buffer, buffer_count, tmp);
 
     // Free up the memorty used to store the image
@@ -686,7 +626,7 @@ int main(int argc, char **argv)
 
 inline void setRGB(png_byte *ptr, float val, float count)
 {
-    // da https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
+    
     float value;
     if (count != 0.0)
     {
@@ -694,18 +634,18 @@ inline void setRGB(png_byte *ptr, float val, float count)
             value = val / count;
         else
             value = val * count;
+        // from https://stackoverflow.com/questions/6394304/algorithm-how-do-i-fade-from-red-to-green-via-yellow-using-rgb-values
         ptr[0] = (1 - value) * 255;
         ptr[1] = value * 255;
         ptr[2] = 0;
-
-        //printf("%f\t%d %d %d\n", value, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
     }
     else
     {
         ptr[0] = ptr[1] = ptr[2] = 255;
     }
-
-    //printf("%f\t%d %d %d\n", val, ptr[0], ptr[1], ptr[2]); // stampa valori di val + rgb
+#if PRINT
+    printf("%f\t%d %d %d\n", value, ptr[0], ptr[1], ptr[2]); // print value of value + rgb
+#endif
 }
 
 int writeImage(char *filename, int width, int height, float *buffer, float *buffer_count, char *title)
