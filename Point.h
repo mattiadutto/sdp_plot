@@ -1,4 +1,4 @@
-class  PointClass{
+class  Point{
     private:
         int x;
         int y;
@@ -7,21 +7,21 @@ class  PointClass{
         float coverage;
 
     public:
-         PointClass(){
-             PointClass(-1, -1);
+         Point(){
+             Point(-1, -1);
         }
-         PointClass(float x, float y){
+         Point(float x, float y){
             this->x = (int)x;
             this->y = (int)y;
             this->number_of_points = 0;
             this->coverage = 0;
         }
 
-         PointClass(const  PointClass &p){
-             PointClass(p.x, p.y);
+         Point(const  Point &p){
+             Point(p.x, p.y);
         }
 
-         PointClass &operator=(const  PointClass &p){
+         Point &operator=(const  Point &p){
             x = p.x;
             y = p.y;
             number_of_points = p.number_of_points;
