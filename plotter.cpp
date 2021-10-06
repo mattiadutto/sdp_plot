@@ -585,7 +585,7 @@ int main(int argc, char **argv)
         cout << endl;
     }
 #endif
-
+    // Image creation
     cout << "Creazione immagine"
          << "\n";
     char tmp[MAX_STR + 1];
@@ -601,7 +601,7 @@ int main(int argc, char **argv)
     cout << "Fine"
          << "\n";
 #else
-    // Creo l'immagine
+    // Image creation
     cout << "Creazione immagine"
          << "\n";
     char tmp[MAX_STR + 1];
