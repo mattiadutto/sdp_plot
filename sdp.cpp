@@ -1,5 +1,5 @@
 #define PRINT 0 // Per debug, stampa alcuni dati extra
-#define TIME 0  // Per calcolo tempo esecuzione
+#define TIME 1  // Per calcolo tempo esecuzione
 #define THREAD 0
 #define BOOST 1 // Libreria per la gestione degli argomenti.
 #define RESIZE 1
@@ -57,13 +57,13 @@ int main(int argc, char **argv)
     float width, height;
 
     std::ifstream file_pointer;
-    std::unordered_map<std::string, PointClass *> map_points;
+    std::unordered_map<std::string, Point *> map_points;
     std::string signal_name;
 
     float x, y;
     float coverage;
 
-    std::unordered_map<std::string, PointClass *>::iterator it;
+    std::unordered_map<std::string, Point *>::iterator it;
 #if BOOST
     //Command line argument handling
     po::options_description desc("Allowed options");
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
         width = atoi(strtok(NULL, "x"));
     }
 #endif
-    //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string,   PointClass>));
+    //printf("SIZE OF PAIR: %lu", sizeof(std::pair<std::string,   Point>));
 
     // Leggo il file dei segnali
     cout << "Lettura file segnali"
@@ -188,12 +188,12 @@ int main(int argc, char **argv)
                 MAX_WIDTH = x;
             if (y > MAX_HEIGHT)
                 MAX_HEIGHT = y;
-            // std::pair<std::string,  PointClass *> my_point (signal_name,new  PointClass(x,y)); // alternativa alla riga di sotto
+            // std::pair<std::string,  Point *> my_point (signal_name,new  Point(x,y)); // alternativa alla riga di sotto
             // map_points.insert(my_point);
             it = map_points.find(signal_name);
 
             if (it == map_points.end() && !file_pointer.eof())
-                map_points.insert(it, std::pair<std::string, PointClass *>(signal_name, new PointClass(x, y)));
+                map_points.insert(it, std::pair<std::string, Point *>(signal_name, new Point(x, y)));
         }
     }
 
